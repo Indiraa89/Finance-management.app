@@ -1,0 +1,7 @@
+* text=auto eol=lf
+
+# Чтобы GitHub показывал язык репозитория как 100% TypeScript:
+# служебные файлы (html, json, md, конфиги) не учитываются в статистике.
+*.html linguist-detectable=false
+*.json linguist-detectable=false
+*.md linguist-documentation
