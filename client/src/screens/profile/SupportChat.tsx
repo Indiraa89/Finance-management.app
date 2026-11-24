@@ -1,10 +1,11 @@
-import { SendHorizontal } from 'lucide-react';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import styled from 'styled-components';
+import { SendHorizontal } from 'lucide-react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Screen } from '@/components/Screen';
-import { Loadable, inputStyles } from '@/components/ui';
+import { Loadable, T } from '@/components/ui';
 import { useSendSupportMessage, useSupportMessages } from '@/hooks/queries';
-import { colors } from '@/theme';
+import { colors, fonts } from '@/theme';
 import { timeAndDate } from '@/utils/format';
 
 /** 9.5. Онлайн-поддержка (чат с ботом на сервере) */
@@ -12,102 +13,100 @@ export function SupportChat() {
   const messages = useSupportMessages();
   const send = useSendSupportMessage();
   const [text, setText] = useState('');
-  const endRef = useRef<HTMLDivElement>(null);
+  const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.data?.length]);
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
+  const submit = () => {
     if (!text.trim()) return;
     send.mutate(text.trim());
     setText('');
   };
 
   return (
-    <Screen back="/profile/help" title="Онлайн-поддержка" sheetPadding="28px 22px 120px">
+    <Screen
+      back
+      title="Онлайн-поддержка"
+      sheetStyle={{ paddingTop: 28, paddingHorizontal: 22 }}
+      floating={
+        <View style={[s.composer, { paddingBottom: 16 + insets.bottom, marginBottom: -16 - insets.bottom }]}>
+          <TextInput
+            placeholder="Напишите сообщение…"
+            placeholderTextColor="rgba(9, 48, 48, 0.45)"
+            value={text}
+            onChangeText={setText}
+            onSubmitEditing={submit}
+            style={s.input}
+          />
+          <Pressable style={[s.send, !text.trim() && { opacity: 0.5 }]} onPress={submit} accessibilityLabel="Отправить">
+            <SendHorizontal size={20} color={colors.dark} />
+          </Pressable>
+        </View>
+      }
+    >
       <Loadable query={messages}>
         {(list) => (
-          <Thread>
-            {list.map((m) => (
-              <Bubble key={m.id} $mine={m.from === 'user'}>
-                <p>{m.text}</p>
-                <time>{timeAndDate(m.date)}</time>
-              </Bubble>
-            ))}
+          <View style={{ gap: 12 }}>
+            {list.map((m) => {
+              const mine = m.from === 'user';
+              return (
+                <View key={m.id} style={[s.bubble, mine ? s.mine : s.theirs]}>
+                  <T size={14} style={{ lineHeight: 20 }}>
+                    {m.text}
+                  </T>
+                  <T size={11} color={colors.muted} style={{ textAlign: 'right', marginTop: 4 }}>
+                    {timeAndDate(m.date)}
+                  </T>
+                </View>
+              );
+            })}
             {send.isPending && (
-              <Bubble $mine>
-                <p>{send.variables}</p>
-              </Bubble>
+              <View style={[s.bubble, s.mine]}>
+                <T size={14}>{send.variables}</T>
+              </View>
             )}
-            <div ref={endRef} />
-          </Thread>
+          </View>
         )}
       </Loadable>
-      <Composer onSubmit={submit}>
-        <input placeholder="Напишите сообщение…" value={text} onChange={(e) => setText(e.target.value)} />
-        <button type="submit" aria-label="Отправить" disabled={!text.trim()}>
-          <SendHorizontal size={20} />
-        </button>
-      </Composer>
     </Screen>
   );
 }
 
-const Thread = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-`;
-
-const Bubble = styled.div<{ $mine: boolean }>`
-  max-width: 80%;
-  align-self: ${({ $mine }) => ($mine ? 'flex-end' : 'flex-start')};
-  background: ${({ $mine }) => ($mine ? colors.primary : colors.lightGreen)};
-  border-radius: ${({ $mine }) => ($mine ? '20px 20px 4px 20px' : '20px 20px 20px 4px')};
-  padding: 10px 14px;
-
-  p {
-    font-size: 14px;
-    line-height: 1.4;
-  }
-  time {
-    display: block;
-    margin-top: 4px;
-    font-size: 11px;
-    opacity: 0.7;
-    text-align: right;
-  }
-`;
-
-const Composer = styled.form`
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 20;
-  padding: 16px 22px 22px;
-  background: ${colors.lightGreen};
-  border-radius: 30px 30px 0 0;
-  display: flex;
-  gap: 10px;
-
-  input {
-    ${inputStyles};
-    background: ${colors.honeydew};
-    padding-right: 20px;
-  }
-  button {
-    width: 44px;
-    height: 44px;
-    flex: none;
-    border-radius: 50%;
-    background: ${colors.primary};
-    display: grid;
-    place-items: center;
-  }
-  button:disabled {
-    opacity: 0.5;
-  }
-`;
+const s = StyleSheet.create({
+  bubble: { maxWidth: '80%', paddingVertical: 10, paddingHorizontal: 14 },
+  mine: {
+    alignSelf: 'flex-end',
+    backgroundColor: colors.primary,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 4,
+  },
+  theirs: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.lightGreen,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomRightRadius: 20,
+    borderBottomLeftRadius: 4,
+  },
+  composer: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    gap: 10,
+    paddingTop: 16,
+    paddingHorizontal: 22,
+    backgroundColor: colors.lightGreen,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+  },
+  input: {
+    flex: 1,
+    height: 44,
+    borderRadius: 18,
+    paddingHorizontal: 20,
+    backgroundColor: colors.honeydew,
+    fontFamily: fonts.regular,
+    fontSize: 15,
+    color: colors.dark,
+  },
+  send: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+});

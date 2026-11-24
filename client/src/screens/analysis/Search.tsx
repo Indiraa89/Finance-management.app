@@ -1,16 +1,16 @@
 import type { TransactionQuery, TransactionType } from '@finwise/shared';
-import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router';
-import styled from 'styled-components';
+import { useState } from 'react';
+import { Pressable, TextInput, View } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { TransactionList } from '@/components/TransactionRow';
-import { Button, Empty, Loadable, SectionTitle, SelectField, Stack, TextField, inputStyles } from '@/components/ui';
+import { Button, Card, Empty, Loadable, Row, SectionTitle, SelectField, Stack, T, TextField } from '@/components/ui';
 import { useCategories, useTransactions } from '@/hooks/queries';
-import { colors } from '@/theme';
+import { useNav } from '@/navigation/types';
+import { colors, fonts } from '@/theme';
 
 /** 9.2.5-A/B. Поиск по транзакциям */
 export function Search() {
-  const navigate = useNavigate();
+  const navigation = useNav();
   const categories = useCategories();
   const [text, setText] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -18,8 +18,7 @@ export function Search() {
   const [type, setType] = useState<TransactionType>('expense');
   const [query, setQuery] = useState<TransactionQuery | null>(null);
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
+  const search = () =>
     setQuery({
       q: text || undefined,
       categoryId: categoryId || undefined,
@@ -27,55 +26,71 @@ export function Search() {
       from: date || undefined,
       to: date || undefined,
     });
-  };
 
   return (
     <Screen
-      nav
+      tab="Analysis"
       back
       title="Поиск"
       top={
-        <SearchInput
+        <TextInput
           placeholder="Поиск…"
+          placeholderTextColor="rgba(9, 48, 48, 0.45)"
           value={text}
-          onChange={(e) => setText(e.target.value)}
-          aria-label="Текст для поиска"
+          onChangeText={setText}
+          onSubmitEditing={search}
+          accessibilityLabel="Текст для поиска"
+          style={{
+            marginTop: 20,
+            height: 44,
+            borderRadius: 18,
+            paddingHorizontal: 20,
+            backgroundColor: colors.honeydew,
+            fontFamily: fonts.regular,
+            fontSize: 15,
+            color: colors.dark,
+          }}
         />
       }
     >
-      <form onSubmit={submit}>
-        <Stack $gap={20}>
-          <SelectField
-            label="Категория"
-            placeholder="Все категории"
-            value={categoryId}
-            onChange={setCategoryId}
-            options={[
-              { value: '', label: 'Все категории' },
-              ...(categories.data ?? []).map((c) => ({ value: c.id, label: c.name })),
-            ]}
-          />
-          <TextField label="Дата" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          <div>
-            <SectionTitle style={{ marginLeft: 14, marginBottom: 10 }}>Тип</SectionTitle>
-            <Radios>
-              {(['income', 'expense'] as const).map((t) => (
-                <label key={t}>
-                  <input type="radio" name="type" checked={type === t} onChange={() => setType(t)} />
-                  <Dot $on={type === t} />
-                  {t === 'income' ? 'Доход' : 'Расход'}
-                </label>
-              ))}
-            </Radios>
-          </div>
-          <Stack $center>
-            <Button type="submit" $small>
-              Искать
-            </Button>
-          </Stack>
-        </Stack>
-      </form>
-      {query && <Results query={query} onSelect={(id) => navigate(`/transactions/${id}`)} />}
+      <Stack gap={20}>
+        <SelectField
+          label="Категория"
+          placeholder="Все категории"
+          value={categoryId}
+          onChange={setCategoryId}
+          options={[{ value: '', label: 'Все категории' }, ...(categories.data ?? []).map((c) => ({ value: c.id, label: c.name }))]}
+        />
+        <TextField label="Дата (ГГГГ-ММ-ДД)" placeholder="Любая дата" value={date} onChangeText={setDate} />
+        <View>
+          <SectionTitle style={{ marginLeft: 14, marginBottom: 10 }}>Тип</SectionTitle>
+          <Row gap={36} style={{ paddingLeft: 14 }}>
+            {(['income', 'expense'] as const).map((t) => (
+              <Pressable key={t} onPress={() => setType(t)} accessibilityRole="radio" accessibilityState={{ checked: type === t }}>
+                <Row gap={8}>
+                  <View
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: 8,
+                      borderWidth: 2,
+                      borderColor: colors.primary,
+                      padding: 2,
+                    }}
+                  >
+                    {type === t && <View style={{ flex: 1, borderRadius: 4, backgroundColor: colors.primary }} />}
+                  </View>
+                  <T>{t === 'income' ? 'Доход' : 'Расход'}</T>
+                </Row>
+              </Pressable>
+            ))}
+          </Row>
+        </View>
+        <Button title="Искать" small onPress={search} />
+        {query && (
+          <Results query={query} onSelect={(id) => navigation.navigate('TransactionDetails', { id })} />
+        )}
+      </Stack>
     </Screen>
   );
 }
@@ -84,7 +99,7 @@ function Results({ query, onSelect }: { query: TransactionQuery; onSelect: (id: 
   const transactions = useTransactions(query);
   const categories = useCategories();
   return (
-    <ResultBox>
+    <Card style={{ marginTop: 8 }}>
       <Loadable query={transactions}>
         {(items) =>
           items.length === 0 ? (
@@ -94,47 +109,6 @@ function Results({ query, onSelect }: { query: TransactionQuery; onSelect: (id: 
           )
         }
       </Loadable>
-    </ResultBox>
+    </Card>
   );
 }
-
-const SearchInput = styled.input`
-  ${inputStyles};
-  margin-top: 20px;
-  background: ${colors.honeydew};
-`;
-
-const Radios = styled.div`
-  display: flex;
-  gap: 36px;
-  padding-left: 14px;
-
-  label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    font-size: 14px;
-  }
-  input {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-  }
-`;
-
-const Dot = styled.span<{ $on: boolean }>`
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid ${colors.primary};
-  background: ${({ $on }) => ($on ? colors.primary : 'transparent')};
-  box-shadow: inset 0 0 0 2px ${colors.honeydew};
-`;
-
-const ResultBox = styled.div`
-  margin-top: 28px;
-  background: ${colors.lightGreen};
-  border-radius: 22px;
-  padding: 16px;
-`;

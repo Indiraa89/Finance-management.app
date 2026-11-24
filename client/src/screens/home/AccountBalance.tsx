@@ -1,55 +1,59 @@
-import { ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
-import { Link, useNavigate } from 'react-router';
-import styled from 'styled-components';
+import { ArrowDownToLine, ArrowUpFromLine } from 'lucide-react-native';
+import type { ReactNode } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { BalanceSummary } from '@/components/BalanceSummary';
 import { Screen } from '@/components/Screen';
 import { TransactionList } from '@/components/TransactionRow';
-import { Loadable, Row, SectionTitle, Stack } from '@/components/ui';
+import { Loadable, Row, SectionTitle, Stack, T, TextLink } from '@/components/ui';
 import { useCategories, useSummary, useTransactions } from '@/hooks/queries';
+import { useNav } from '@/navigation/types';
 import { colors } from '@/theme';
 import { money } from '@/utils/format';
 
 /** 6-A. Баланс счёта */
 export function AccountBalance() {
-  const navigate = useNavigate();
+  const navigation = useNav();
   const summary = useSummary();
   const categories = useCategories();
   const transactions = useTransactions({ limit: 6 });
 
   return (
     <Screen
-      nav
+      tab={null}
       back
       title="Баланс счёта"
       top={
         <>
           <BalanceSummary summary={summary.data} />
-          <Cards>
-            <MiniCard to="/transactions?type=income">
-              <ArrowUpFromLine size={22} color={colors.primary} />
-              <span>Доход за месяц</span>
-              <b>{money(summary.data?.monthIncome ?? 0)}</b>
-            </MiniCard>
-            <MiniCard to="/transactions?type=expense">
-              <ArrowDownToLine size={22} color={colors.oceanBlue} />
-              <span>Расход за месяц</span>
-              <b style={{ color: colors.oceanBlue }}>{money(summary.data?.monthExpense ?? 0)}</b>
-            </MiniCard>
-          </Cards>
+          <View style={{ flexDirection: 'row', gap: 14, marginTop: 18 }}>
+            <MiniCard
+              icon={<ArrowUpFromLine size={22} color={colors.primary} />}
+              label="Доход за месяц"
+              value={money(summary.data?.monthIncome ?? 0)}
+              onPress={() => navigation.navigate('Transactions', { type: 'income' })}
+            />
+            <MiniCard
+              icon={<ArrowDownToLine size={22} color={colors.oceanBlue} />}
+              label="Расход за месяц"
+              value={money(summary.data?.monthExpense ?? 0)}
+              valueColor={colors.oceanBlue}
+              onPress={() => navigation.navigate('Transactions', { type: 'expense' })}
+            />
+          </View>
         </>
       }
     >
-      <Stack $gap={20}>
-        <Row $between>
-          <SectionTitle style={{ fontSize: 17 }}>Транзакции</SectionTitle>
-          <SeeAll to="/transactions">Смотреть все</SeeAll>
+      <Stack gap={20}>
+        <Row between>
+          <SectionTitle size={17}>Транзакции</SectionTitle>
+          <TextLink title="Смотреть все" onPress={() => navigation.navigate('Transactions')} />
         </Row>
         <Loadable query={transactions}>
           {(items) => (
             <TransactionList
               items={items}
               categories={categories.data}
-              onSelect={(tx) => navigate(`/transactions/${tx.id}`)}
+              onSelect={(tx) => navigation.navigate('TransactionDetails', { id: tx.id })}
             />
           )}
         </Loadable>
@@ -58,33 +62,34 @@ export function AccountBalance() {
   );
 }
 
-export const Cards = styled.div`
-  display: flex;
-  gap: 14px;
-  margin-top: 18px;
-`;
+export function MiniCard({
+  icon,
+  label,
+  value,
+  valueColor = colors.dark,
+  onPress,
+  active,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  valueColor?: string;
+  onPress?: () => void;
+  active?: boolean;
+}) {
+  return (
+    <Pressable style={[s.mini, active && { backgroundColor: colors.oceanBlue }]} onPress={onPress} accessibilityRole="button">
+      {icon}
+      <T size={13} color={active ? colors.white : colors.dark}>
+        {label}
+      </T>
+      <T size={15} weight="bold" color={active ? colors.white : valueColor} numberOfLines={1}>
+        {value}
+      </T>
+    </Pressable>
+  );
+}
 
-export const MiniCard = styled(Link)`
-  flex: 1;
-  min-width: 0;
-  background: ${colors.honeydew};
-  border-radius: 15px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  text-align: center;
-
-  span {
-    font-size: 13px;
-  }
-  b {
-    font-size: 16px;
-    white-space: nowrap;
-  }
-`;
-
-const SeeAll = styled(Link)`
-  font-size: 13px;
-`;
+const s = StyleSheet.create({
+  mini: { flex: 1, backgroundColor: colors.honeydew, borderRadius: 15, padding: 12, alignItems: 'center', gap: 2 },
+});

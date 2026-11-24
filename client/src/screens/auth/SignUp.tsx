@@ -1,60 +1,55 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useState } from 'react';
 import { Screen } from '@/components/Screen';
-import { Button, ErrorText, Hint, PasswordField, Stack, TextField } from '@/components/ui';
+import { Button, ErrorText, Hint, PasswordField, Stack, TextField, TextLink } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { useSubmit } from '@/hooks/useSubmit';
-import { Small } from './Login';
+import { useNav } from '@/navigation/types';
+import { ymd } from '@/utils/format';
 
 /** 3.0-A. Создание аккаунта */
 export function SignUp() {
   const { register } = useAuth();
-  const navigate = useNavigate();
+  const navigation = useNav();
   const [form, setForm] = useState({
     fullName: '',
     email: '',
     phone: '',
-    birthDate: '',
+    birthDate: ymd(new Date(2004, 0, 1)),
     password: '',
     confirm: '',
   });
   const { loading, error, setError, run } = useSubmit();
+  const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
 
-  const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
-    setForm((f) => ({ ...f, [key]: e.target.value }));
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
+  const submit = () => {
     if (form.password !== form.confirm) return setError('Пароли не совпадают');
     const { confirm: _c, ...body } = form;
-    const ok = await run(() => register(body));
-    if (ok) navigate('/home', { replace: true });
+    void run(() => register(body));
   };
 
   return (
-    <Screen title="Создать аккаунт" bell={false} back="/welcome" sheetPadding="40px 36px 40px">
-      <form onSubmit={submit}>
-        <Stack $gap={14}>
-          <TextField label="Имя и фамилия" placeholder="Индира Сапарова" value={form.fullName} onChange={set('fullName')} required />
-          <TextField label="E-mail" type="email" placeholder="example@example.com" value={form.email} onChange={set('email')} required />
-          <TextField label="Телефон" type="tel" placeholder="+7 700 000 00 00" value={form.phone} onChange={set('phone')} required />
-          <TextField label="Дата рождения" type="date" value={form.birthDate} onChange={set('birthDate')} required />
-          <PasswordField label="Пароль" autoComplete="new-password" value={form.password} onChange={set('password')} required />
-          <PasswordField label="Повторите пароль" autoComplete="new-password" value={form.confirm} onChange={set('confirm')} required />
-          <Hint style={{ textAlign: 'center' }}>
-            Продолжая, вы соглашаетесь с <b>Условиями использования</b> и <b>Политикой конфиденциальности</b>.
-          </Hint>
-          {error && <ErrorText>{error}</ErrorText>}
-          <Stack $gap={10} $center>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Создаём…' : 'Зарегистрироваться'}
-            </Button>
-            <Small>
-              Уже есть аккаунт? <Link to="/login">Войти</Link>
-            </Small>
-          </Stack>
+    <Screen title="Создать аккаунт" bell={false} back sheetStyle={{ paddingTop: 40, paddingHorizontal: 32 }}>
+      <Stack gap={14}>
+        <TextField label="Имя и фамилия" placeholder="Индира Сапарова" value={form.fullName} onChangeText={set('fullName')} />
+        <TextField
+          label="E-mail"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          placeholder="example@example.com"
+          value={form.email}
+          onChangeText={set('email')}
+        />
+        <TextField label="Телефон" keyboardType="phone-pad" placeholder="+7 700 000 00 00" value={form.phone} onChangeText={set('phone')} />
+        <TextField label="Дата рождения (ГГГГ-ММ-ДД)" placeholder="2004-01-01" value={form.birthDate} onChangeText={set('birthDate')} />
+        <PasswordField label="Пароль" value={form.password} onChangeText={set('password')} />
+        <PasswordField label="Повторите пароль" value={form.confirm} onChangeText={set('confirm')} />
+        <Hint center>Продолжая, вы соглашаетесь с Условиями использования и Политикой конфиденциальности.</Hint>
+        {error ? <ErrorText>{error}</ErrorText> : null}
+        <Stack gap={10} center>
+          <Button title={loading ? 'Создаём…' : 'Зарегистрироваться'} disabled={loading} onPress={submit} />
+          <TextLink title="Уже есть аккаунт? Войти" onPress={() => navigation.navigate('Login')} />
         </Stack>
-      </form>
+      </Stack>
     </Screen>
   );
 }

@@ -1,26 +1,58 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import type { ApiError } from '@finwise/shared';
 
 /**
- * Базовый HTTP-клиент для нашего API.
- * В режиме разработки Vite проксирует /api на http://localhost:4000 (см. vite.config.ts).
+ * Адрес нашего API (папка server/, порт 4000).
+ * - В браузере (expo web) — localhost.
+ * - На телефоне в Expo Go — IP компьютера, на котором запущен `npm run dev`
+ *   (Expo сам знает этот адрес: hostUri).
+ * - Можно задать вручную переменной EXPO_PUBLIC_API_URL.
  */
-const BASE_URL = import.meta.env.VITE_API_URL ?? '/api';
+function resolveBaseUrl(): string {
+  const fromEnv = process.env.EXPO_PUBLIC_API_URL;
+  if (fromEnv) return fromEnv;
+  if (Platform.OS === 'web') return 'http://localhost:4000/api';
+  const host = Constants.expoConfig?.hostUri?.split(':')[0];
+  if (host) return `http://${host}:4000/api`;
+  return Platform.OS === 'android' ? 'http://10.0.2.2:4000/api' : 'http://localhost:4000/api';
+}
+
+export const BASE_URL = resolveBaseUrl();
 
 const TOKEN_KEY = 'finwise.token';
 
-export const tokenStorage = {
-  get: (): string | null => safe(() => localStorage.getItem(TOKEN_KEY)),
-  set: (token: string) => safe(() => localStorage.setItem(TOKEN_KEY, token)),
-  clear: () => safe(() => localStorage.removeItem(TOKEN_KEY)),
-};
+/** Токен держим в памяти и в AsyncStorage (хранилище телефона) */
+let tokenCache: string | null = null;
 
-function safe<T>(fn: () => T): T | null {
-  try {
-    return fn();
-  } catch {
-    return null;
-  }
-}
+export const tokenStorage = {
+  get: (): string | null => tokenCache,
+  async load(): Promise<string | null> {
+    try {
+      tokenCache = await AsyncStorage.getItem(TOKEN_KEY);
+    } catch {
+      tokenCache = null;
+    }
+    return tokenCache;
+  },
+  async set(token: string) {
+    tokenCache = token;
+    try {
+      await AsyncStorage.setItem(TOKEN_KEY, token);
+    } catch {
+      /* хранилище недоступно — токен останется только в памяти */
+    }
+  },
+  async clear() {
+    tokenCache = null;
+    try {
+      await AsyncStorage.removeItem(TOKEN_KEY);
+    } catch {
+      /* ничего страшного */
+    }
+  },
+};
 
 /** Ошибка, которую вернул сервер, с понятным текстом на русском */
 export class HttpError extends Error {
@@ -57,7 +89,10 @@ export async function request<T>(method: Method, path: string, body?: unknown): 
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new HttpError(0, 'Нет связи с сервером. Запущен ли API (npm run dev)?');
+    throw new HttpError(
+      0,
+      `Нет связи с сервером (${BASE_URL}). Запущен ли API командой npm run dev и подключён ли телефон к той же Wi-Fi сети?`,
+    );
   }
 
   if (response.status === 204) return undefined as T;
@@ -76,5 +111,5 @@ export async function request<T>(method: Method, path: string, body?: unknown): 
 export function qs(params: Record<string, string | number | undefined>): string {
   const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== '');
   if (entries.length === 0) return '';
-  return `?${new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString()}`;
+  return `?${entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`).join('&')}`;
 }

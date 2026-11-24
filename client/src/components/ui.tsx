@@ -1,204 +1,165 @@
-import { Eye, EyeOff } from 'lucide-react';
-import { useId, useState, type InputHTMLAttributes, type ReactNode } from 'react';
-import styled, { css, keyframes } from 'styled-components';
-import { colors, fonts, radius } from '@/theme';
+import { Check, ChevronDown, Eye, EyeOff } from 'lucide-react-native';
+import { useState, type ReactNode } from 'react';
+import {
+  ActivityIndicator,
+  Modal as RNModal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type StyleProp,
+  type TextInputProps,
+  type TextProps,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
+import { colors, fonts, radius, type FontWeight } from '@/theme';
+
+/* ================= Текст ================= */
+
+interface TProps extends TextProps {
+  size?: number;
+  weight?: FontWeight;
+  color?: string;
+  center?: boolean;
+  children?: ReactNode;
+}
+
+/** Текст с нашим шрифтом. В React Native весь текст пишется через <Text> */
+export function T({ size = 14, weight = 'regular', color = colors.dark, center, style, ...rest }: TProps) {
+  return (
+    <Text
+      {...rest}
+      style={[{ fontFamily: fonts[weight], fontSize: size, color }, center && { textAlign: 'center' }, style]}
+    />
+  );
+}
 
 /* ================= Кнопки ================= */
 
 type Variant = 'primary' | 'secondary' | 'dark' | 'danger' | 'blue';
 
-const variants: Record<Variant, ReturnType<typeof css>> = {
-  primary: css`
-    background: ${colors.primary};
-    color: ${colors.dark};
-  `,
-  secondary: css`
-    background: ${colors.lightGreen};
-    color: ${colors.dark};
-  `,
-  dark: css`
-    background: ${colors.dark};
-    color: ${colors.white};
-  `,
-  danger: css`
-    background: ${colors.danger};
-    color: ${colors.white};
-  `,
-  blue: css`
-    background: ${colors.oceanBlue};
-    color: ${colors.white};
-  `,
+const variantBg: Record<Variant, string> = {
+  primary: colors.primary,
+  secondary: colors.lightGreen,
+  dark: colors.dark,
+  danger: colors.danger,
+  blue: colors.oceanBlue,
 };
 
-export const Button = styled.button<{ $variant?: Variant; $block?: boolean; $small?: boolean }>`
-  ${({ $variant = 'primary' }) => variants[$variant]};
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-width: ${({ $small }) => ($small ? '140px' : '207px')};
-  width: ${({ $block }) => ($block ? '100%' : 'auto')};
-  height: ${({ $small }) => ($small ? '36px' : '45px')};
-  padding: 0 24px;
-  border-radius: ${radius.pill};
-  font-family: ${fonts.main};
-  font-weight: 600;
-  font-size: ${({ $small }) => ($small ? '14px' : '18px')};
-  transition:
-    transform 0.1s,
-    filter 0.2s;
+export function Button({
+  title,
+  onPress,
+  variant = 'primary',
+  small,
+  block,
+  disabled,
+  icon,
+  style,
+}: {
+  title: string;
+  onPress?: () => void;
+  variant?: Variant;
+  small?: boolean;
+  block?: boolean;
+  disabled?: boolean;
+  icon?: ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const light = variant === 'primary' || variant === 'secondary';
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        s.button,
+        {
+          backgroundColor: variantBg[variant],
+          minWidth: small ? 150 : 210,
+          height: small ? 38 : 46,
+          alignSelf: block ? 'stretch' : 'center',
+          opacity: disabled ? 0.55 : pressed ? 0.85 : 1,
+        },
+        style,
+      ]}
+    >
+      {icon}
+      <T size={small ? 14 : 17} weight="semibold" color={light ? colors.dark : colors.white}>
+        {title}
+      </T>
+    </Pressable>
+  );
+}
 
-  &:hover:not(:disabled) {
-    filter: brightness(0.96);
-  }
-  &:active:not(:disabled) {
-    transform: scale(0.98);
-  }
-  &:disabled {
-    opacity: 0.55;
-    cursor: default;
-  }
-`;
-
-export const TextLink = styled.button`
-  font-size: 13px;
-  font-weight: 600;
-  color: ${colors.dark};
-  &:hover {
-    text-decoration: underline;
-  }
-`;
-
-export const Stack = styled.div<{ $gap?: number; $center?: boolean }>`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ $gap = 16 }) => $gap}px;
-  ${({ $center }) =>
-    $center &&
-    css`
-      align-items: center;
-      text-align: center;
-    `}
-`;
-
-export const Row = styled.div<{ $gap?: number; $between?: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: ${({ $gap = 12 }) => $gap}px;
-  ${({ $between }) => $between && 'justify-content: space-between;'}
-`;
+export function TextLink({ title, onPress, color = colors.dark }: { title: string; onPress: () => void; color?: string }) {
+  return (
+    <Pressable onPress={onPress} hitSlop={8}>
+      <T size={13} weight="semibold" color={color} center>
+        {title}
+      </T>
+    </Pressable>
+  );
+}
 
 /* ================= Поля ввода ================= */
 
-const Label = styled.label`
-  display: block;
-  font-size: 15px;
-  font-weight: 500;
-  color: ${colors.dark};
-  margin: 0 0 8px 14px;
-`;
+export function Label({ children }: { children: ReactNode }) {
+  return (
+    <T size={15} weight="medium" style={{ marginLeft: 14, marginBottom: 8 }}>
+      {children}
+    </T>
+  );
+}
 
-const InputBox = styled.div`
-  position: relative;
-  display: flex;
-  align-items: center;
-`;
-
-export const inputStyles = css`
-  width: 100%;
-  height: 44px;
-  border: none;
-  border-radius: ${radius.field};
-  padding: 0 46px 0 20px;
-  background: ${colors.lightGreen};
-  font-size: 15px;
-  color: ${colors.dark};
-  outline: none;
-
-  &::placeholder {
-    color: rgba(9, 48, 48, 0.45);
-  }
-  &:focus {
-    box-shadow: 0 0 0 2px ${colors.primary};
-  }
-`;
-
-const Input = styled.input`
-  ${inputStyles};
-`;
-
-const Trailing = styled.button`
-  position: absolute;
-  right: 14px;
-  display: grid;
-  place-items: center;
-  color: ${colors.dark};
-`;
-
-interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
+interface FieldProps extends TextInputProps {
   label?: string;
   trailing?: ReactNode;
 }
 
-export function TextField({ label, trailing, id, ...rest }: FieldProps) {
-  const autoId = useId();
-  const inputId = id ?? autoId;
+export function TextField({ label, trailing, style, ...rest }: FieldProps) {
   return (
-    <div>
-      {label && <Label htmlFor={inputId}>{label}</Label>}
-      <InputBox>
-        <Input id={inputId} {...rest} />
-        {trailing && <Trailing as="span">{trailing}</Trailing>}
-      </InputBox>
-    </div>
-  );
-}
-
-export function PasswordField({ label, id, placeholder, ...rest }: Omit<FieldProps, 'type' | 'trailing'>) {
-  const [visible, setVisible] = useState(false);
-  const autoId = useId();
-  const inputId = id ?? autoId;
-  return (
-    <div>
-      {label && <Label htmlFor={inputId}>{label}</Label>}
-      <InputBox>
-        <Input
+    <View>
+      {label && <Label>{label}</Label>}
+      <View style={s.inputBox}>
+        <TextInput
+          placeholderTextColor="rgba(9, 48, 48, 0.45)"
           {...rest}
-          id={inputId}
-          type={visible ? 'text' : 'password'}
-          placeholder={placeholder ?? '● ● ● ● ● ● ● ●'}
+          style={[s.input, rest.multiline && s.textArea, style as StyleProp<TextStyle>]}
         />
-        <Trailing
-          type="button"
-          onClick={() => setVisible((v) => !v)}
-          aria-label={visible ? 'Скрыть пароль' : 'Показать пароль'}
-        >
-          {visible ? <Eye size={20} /> : <EyeOff size={20} />}
-        </Trailing>
-      </InputBox>
-    </div>
+        {trailing && <View style={s.trailing}>{trailing}</View>}
+      </View>
+    </View>
   );
 }
 
-const SelectEl = styled.select`
-  ${inputStyles};
-  appearance: none;
-  cursor: pointer;
-  background-image: linear-gradient(45deg, transparent 50%, ${colors.primary} 50%),
-    linear-gradient(135deg, ${colors.primary} 50%, transparent 50%);
-  background-position:
-    calc(100% - 22px) 19px,
-    calc(100% - 16px) 19px;
-  background-size: 6px 6px;
-  background-repeat: no-repeat;
-`;
+export function PasswordField(props: Omit<FieldProps, 'secureTextEntry' | 'trailing'>) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <TextField
+      placeholder="● ● ● ● ● ● ● ●"
+      autoCapitalize="none"
+      autoCorrect={false}
+      {...props}
+      secureTextEntry={!visible}
+      trailing={
+        <Pressable onPress={() => setVisible((v) => !v)} hitSlop={10} accessibilityLabel="Показать пароль">
+          {visible ? <Eye size={20} color={colors.dark} /> : <EyeOff size={20} color={colors.dark} />}
+        </Pressable>
+      }
+    />
+  );
+}
 
+/** Выпадающий список: на телефоне открывается окно со списком вариантов */
 export function SelectField({
   label,
   options,
   value,
   onChange,
-  placeholder,
+  placeholder = 'Выберите',
 }: {
   label?: string;
   options: { value: string; label: string }[];
@@ -206,204 +167,236 @@ export function SelectField({
   onChange: (v: string) => void;
   placeholder?: string;
 }) {
-  const id = useId();
+  const [open, setOpen] = useState(false);
+  const current = options.find((o) => o.value === value);
   return (
-    <div>
-      {label && <Label htmlFor={id}>{label}</Label>}
-      <SelectEl id={id} value={value} onChange={(e) => onChange(e.target.value)}>
-        {placeholder && (
-          <option value="" disabled>
-            {placeholder}
-          </option>
-        )}
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </SelectEl>
-    </div>
+    <View>
+      {label && <Label>{label}</Label>}
+      <Pressable style={[s.input, s.select]} onPress={() => setOpen(true)} accessibilityRole="button">
+        <T size={15} color={current ? colors.dark : 'rgba(9, 48, 48, 0.45)'}>
+          {current?.label ?? placeholder}
+        </T>
+        <ChevronDown size={20} color={colors.primary} />
+      </Pressable>
+      <RNModal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable style={s.overlay} onPress={() => setOpen(false)}>
+          <View style={s.sheetList}>
+            <T size={17} weight="semibold" center style={{ marginBottom: 10 }}>
+              {label ?? placeholder}
+            </T>
+            <ScrollView style={{ maxHeight: 360 }}>
+              {options.map((o) => (
+                <Pressable
+                  key={o.value}
+                  style={s.option}
+                  onPress={() => {
+                    onChange(o.value);
+                    setOpen(false);
+                  }}
+                >
+                  <T size={15}>{o.label}</T>
+                  {o.value === value && <Check size={18} color={colors.primary} />}
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </Pressable>
+      </RNModal>
+    </View>
   );
 }
 
-const Area = styled.textarea`
-  ${inputStyles};
-  height: 140px;
-  padding: 14px 20px;
-  resize: none;
-`;
+/* ================= Раскладка ================= */
 
-export function TextArea({
-  label,
-  value,
-  onChange,
-  placeholder,
+export function Stack({
+  gap = 16,
+  center,
+  style,
+  children,
 }: {
-  label?: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
+  gap?: number;
+  center?: boolean;
+  style?: StyleProp<ViewStyle>;
+  children?: ReactNode;
 }) {
-  const id = useId();
+  return <View style={[{ gap }, center && { alignItems: 'center' }, style]}>{children}</View>;
+}
+
+export function Row({
+  gap = 12,
+  between,
+  style,
+  children,
+}: {
+  gap?: number;
+  between?: boolean;
+  style?: StyleProp<ViewStyle>;
+  children?: ReactNode;
+}) {
   return (
-    <div>
-      {label && <Label htmlFor={id}>{label}</Label>}
-      <Area id={id} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
-    </div>
+    <View style={[{ flexDirection: 'row', alignItems: 'center', gap }, between && { justifyContent: 'space-between' }, style]}>
+      {children}
+    </View>
   );
 }
+
+export const VDivider = () => <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: colors.primary }} />;
 
 /* ================= Сообщения ================= */
 
-export const ErrorText = styled.p`
-  color: ${colors.danger};
-  font-size: 13px;
-  text-align: center;
-`;
+export const ErrorText = ({ children }: { children: ReactNode }) => (
+  <T size={13} color={colors.danger} center>
+    {children}
+  </T>
+);
 
-export const Hint = styled.p`
-  font-size: 12px;
-  line-height: 1.5;
-  color: ${colors.muted};
-`;
+export const Hint = ({ children, center, style }: { children: ReactNode; center?: boolean; style?: StyleProp<TextStyle> }) => (
+  <T size={12} color={colors.muted} center={center} style={[{ lineHeight: 18 }, style]}>
+    {children}
+  </T>
+);
 
-const spin = keyframes`to { transform: rotate(360deg); }`;
+export const SectionTitle = ({ children, size = 15, style }: { children: ReactNode; size?: number; style?: StyleProp<TextStyle> }) => (
+  <T size={size} weight="semibold" style={style}>
+    {children}
+  </T>
+);
 
-export const Spinner = styled.div<{ $size?: number }>`
-  width: ${({ $size = 28 }) => $size}px;
-  height: ${({ $size = 28 }) => $size}px;
-  border-radius: 50%;
-  border: 3px solid ${colors.lightGreen};
-  border-top-color: ${colors.primary};
-  animation: ${spin} 0.8s linear infinite;
-  margin: 24px auto;
-`;
+export const Spinner = () => <ActivityIndicator color={colors.primary} size="large" style={{ marginVertical: 24 }} />;
 
-export const Empty = styled.p`
-  text-align: center;
-  color: ${colors.muted};
-  font-size: 14px;
-  padding: 24px 0;
-`;
+export const Empty = ({ children }: { children: ReactNode }) => (
+  <T color={colors.muted} center style={{ paddingVertical: 24 }}>
+    {children}
+  </T>
+);
 
 /** Показ состояния запроса: загрузка / ошибка / данные */
-export function Loadable<T>({
+export function Loadable<D>({
   query,
   children,
 }: {
-  query: { data: T | undefined; isLoading: boolean; error: unknown };
-  children: (data: T) => ReactNode;
+  query: { data: D | undefined; isLoading: boolean; error: unknown };
+  children: (data: D) => ReactNode;
 }) {
   if (query.isLoading) return <Spinner />;
-  if (query.error)
-    return <ErrorText>{query.error instanceof Error ? query.error.message : 'Ошибка загрузки'}</ErrorText>;
+  if (query.error) return <ErrorText>{query.error instanceof Error ? query.error.message : 'Ошибка загрузки'}</ErrorText>;
   if (query.data === undefined) return null;
   return <>{children(query.data)}</>;
 }
 
 /* ================= Переключатель ================= */
 
-const ToggleTrack = styled.button<{ $on: boolean }>`
-  width: 44px;
-  height: 26px;
-  flex: none;
-  border-radius: 13px;
-  background: ${({ $on }) => ($on ? colors.primary : colors.lightGreen)};
-  position: relative;
-  transition: background 0.2s;
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 3px;
-    left: ${({ $on }) => ($on ? '21px' : '3px')};
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: ${colors.white};
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    transition: left 0.2s;
-  }
-`;
-
-export function Toggle({
-  checked,
-  onChange,
-  label,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
-}) {
+export function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
-    <ToggleTrack
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      $on={checked}
-      onClick={() => onChange(!checked)}
-    />
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityState={{ checked }}
+      accessibilityLabel={label}
+      onPress={() => onChange(!checked)}
+      style={[s.track, { backgroundColor: checked ? colors.primary : colors.lightGreen }]}
+    >
+      <View style={[s.thumb, { left: checked ? 21 : 3 }]} />
+    </Pressable>
+  );
+}
+
+/** Строка «подпись — переключатель» */
+export function ToggleRow({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <Row between>
+      <T size={15} weight="medium" style={{ flex: 1 }}>
+        {label}
+      </T>
+      <Toggle label={label} checked={checked} onChange={onChange} />
+    </Row>
   );
 }
 
 /* ================= Сегменты (День/Неделя/Месяц/Год) ================= */
 
-const SegWrap = styled.div`
-  display: flex;
-  background: ${colors.lightGreen};
-  border-radius: 22px;
-  padding: 6px;
-  gap: 4px;
-`;
-
-const Seg = styled.button<{ $active: boolean }>`
-  flex: 1;
-  height: 38px;
-  border-radius: 19px;
-  font-size: 14px;
-  font-weight: ${({ $active }) => ($active ? 600 : 400)};
-  background: ${({ $active }) => ($active ? colors.primary : 'transparent')};
-  transition: background 0.2s;
-`;
-
-export function Segmented<T extends string>({
+export function Segmented<V extends string>({
   value,
   options,
   onChange,
 }: {
-  value: T;
-  options: { value: T; label: string }[];
-  onChange: (v: T) => void;
+  value: V;
+  options: { value: V; label: string }[];
+  onChange: (v: V) => void;
 }) {
   return (
-    <SegWrap role="tablist">
-      {options.map((o) => (
-        <Seg
-          key={o.value}
-          role="tab"
-          aria-selected={o.value === value}
-          $active={o.value === value}
-          onClick={() => onChange(o.value)}
-        >
-          {o.label}
-        </Seg>
-      ))}
-    </SegWrap>
+    <View style={s.segWrap} accessibilityRole="tablist">
+      {options.map((o) => {
+        const active = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            onPress={() => onChange(o.value)}
+            style={[s.seg, active && { backgroundColor: colors.primary }]}
+          >
+            <T size={14} weight={active ? 'semibold' : 'regular'}>
+              {o.label}
+            </T>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
-/* ================= Прочее ================= */
+/* ================= Карточка-плашка ================= */
 
-export const SectionTitle = styled.h3`
-  font-size: 15px;
-  font-weight: 600;
-  color: ${colors.dark};
-`;
+export const Card = ({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) => (
+  <View style={[{ backgroundColor: colors.lightGreen, borderRadius: 20, padding: 18 }, style]}>{children}</View>
+);
 
-export const VDivider = styled.span`
-  width: 1px;
-  align-self: stretch;
-  background: ${colors.primary};
-  flex: none;
-`;
+const s = StyleSheet.create({
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+    borderRadius: radius.pill,
+  },
+  inputBox: { justifyContent: 'center' },
+  input: {
+    height: 44,
+    borderRadius: radius.field,
+    paddingLeft: 20,
+    paddingRight: 46,
+    backgroundColor: colors.lightGreen,
+    fontFamily: fonts.regular,
+    fontSize: 15,
+    color: colors.dark,
+  },
+  textArea: { height: 130, paddingTop: 14, textAlignVertical: 'top' },
+  trailing: { position: 'absolute', right: 14 },
+  select: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: 16 },
+  overlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', padding: 24 },
+  sheetList: { backgroundColor: colors.honeydew, borderRadius: 24, padding: 20, maxWidth: 400, width: '100%', alignSelf: 'center' },
+  option: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.lightGreen,
+  },
+  track: { width: 44, height: 26, borderRadius: 13, justifyContent: 'center' },
+  thumb: {
+    position: 'absolute',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.white,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+  },
+  segWrap: { flexDirection: 'row', backgroundColor: colors.lightGreen, borderRadius: 22, padding: 6, gap: 4 },
+  seg: { flex: 1, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+});

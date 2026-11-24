@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
-import styled from 'styled-components';
+import { Pressable, View } from 'react-native';
 import { BalanceSummary } from '@/components/BalanceSummary';
 import { BellButton, Screen } from '@/components/Screen';
 import { TransactionList } from '@/components/TransactionRow';
-import { Empty, Loadable, Segmented, Stack } from '@/components/ui';
+import { Empty, Loadable, Segmented, Stack, T } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { useCategories, useSummary, useTransactions } from '@/hooks/queries';
+import { useNav } from '@/navigation/types';
 import { greeting, ymd } from '@/utils/format';
 import { SavingsCard } from './SavingsCard';
 
@@ -22,7 +22,7 @@ function rangeStart(range: Range): string {
 /** 4-A. Главная */
 export function Home() {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const navigation = useNav();
   const [range, setRange] = useState<Range>('month');
   const summary = useSummary();
   const categories = useCategories();
@@ -32,26 +32,28 @@ export function Home() {
 
   return (
     <Screen
-      nav
+      tab="Home"
       header={
-        <Head>
-          <div>
-            <h1>Привет, {firstName}!</h1>
-            <p>{greeting()}</p>
-          </div>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <View>
+            <T size={20} weight="semibold">
+              Привет, {firstName}!
+            </T>
+            <T size={14}>{greeting()}</T>
+          </View>
           <BellButton />
-        </Head>
+        </View>
       }
       top={
-        <Link to="/balance" aria-label="Открыть баланс счёта">
+        <Pressable onPress={() => navigation.navigate('Balance')} accessibilityLabel="Открыть баланс счёта">
           <BalanceSummary summary={summary.data} />
-        </Link>
+        </Pressable>
       }
     >
-      <Stack $gap={26}>
+      <Stack gap={26}>
         {summary.data && (
           <SavingsCard
-            to="/quick-analysis"
+            onPress={() => navigation.navigate('QuickAnalysis')}
             progress={summary.data.savingsProgress}
             goalName={summary.data.savingsGoalName}
             revenueLastWeek={summary.data.revenueLastWeek}
@@ -75,7 +77,7 @@ export function Home() {
               <TransactionList
                 items={items}
                 categories={categories.data}
-                onSelect={(tx) => navigate(`/transactions/${tx.id}`)}
+                onSelect={(tx) => navigation.navigate('TransactionDetails', { id: tx.id })}
               />
             )
           }
@@ -84,17 +86,3 @@ export function Home() {
     </Screen>
   );
 }
-
-const Head = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-
-  h1 {
-    font-size: 20px;
-    font-weight: 600;
-  }
-  p {
-    font-size: 14px;
-  }
-`;

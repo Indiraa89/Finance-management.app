@@ -1,13 +1,13 @@
 import type { AppNotification, NotificationKind } from '@finwise/shared';
-import { BadgeDollarSign, Bell, RefreshCw, TrendingDown, type LucideIcon } from 'lucide-react';
-import styled from 'styled-components';
+import { BadgeDollarSign, Bell, RefreshCw, TrendingDown } from 'lucide-react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Screen } from '@/components/Screen';
-import { Empty, Loadable, Row, TextLink } from '@/components/ui';
+import { Empty, Loadable, Row, T, TextLink } from '@/components/ui';
 import { useMarkAllRead, useMarkNotificationRead, useNotifications } from '@/hooks/queries';
 import { colors } from '@/theme';
 import { timeAndDate } from '@/utils/format';
 
-const icons: Record<NotificationKind, LucideIcon> = {
+const icons: Record<NotificationKind, typeof Bell> = {
   reminder: Bell,
   update: RefreshCw,
   transaction: BadgeDollarSign,
@@ -18,7 +18,8 @@ function groupTitle(iso: string): string {
   const d = new Date(iso);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const diff = Math.floor((today.getTime() - new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) / 86_400_000);
+  const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = Math.floor((today.getTime() - day.getTime()) / 86_400_000);
   if (diff <= 0) return 'Сегодня';
   if (diff === 1) return 'Вчера';
   if (diff < 7) return 'На этой неделе';
@@ -43,38 +44,46 @@ export function Notifications() {
   const markAll = useMarkAllRead();
 
   return (
-    <Screen nav back title="Уведомления" bell={false} sheetPadding="30px 28px 140px">
+    <Screen tab={null} back title="Уведомления" bell={false} sheetStyle={{ paddingTop: 30, paddingHorizontal: 28 }}>
       <Loadable query={notifications}>
         {(list) =>
           list.length === 0 ? (
             <Empty>Уведомлений пока нет</Empty>
           ) : (
-            <>
-              <Row $between style={{ marginBottom: 6 }}>
-                <span />
-                <TextLink onClick={() => markAll.mutate()}>Прочитать все</TextLink>
+            <View>
+              <Row style={{ justifyContent: 'flex-end', marginBottom: 6 }}>
+                <TextLink title="Прочитать все" onPress={() => markAll.mutate()} />
               </Row>
               {group(list).map((g) => (
-                <section key={g.title}>
-                  <GroupTitle>{g.title}</GroupTitle>
+                <View key={g.title}>
+                  <T size={14} weight="medium" style={{ marginTop: 14, marginBottom: 6 }}>
+                    {g.title}
+                  </T>
                   {g.items.map((n) => {
                     const Icon = icons[n.kind];
                     return (
-                      <Item key={n.id} $unread={!n.read} onClick={() => !n.read && markRead.mutate(n.id)}>
-                        <IconBox>
-                          <Icon size={22} strokeWidth={1.8} />
-                        </IconBox>
-                        <Body>
-                          <b>{n.title}</b>
-                          <p>{n.text}</p>
-                          <time>{timeAndDate(n.date)}</time>
-                        </Body>
-                      </Item>
+                      <Pressable key={n.id} style={s.item} onPress={() => !n.read && markRead.mutate(n.id)}>
+                        <View style={s.iconBox}>
+                          <Icon size={22} strokeWidth={1.8} color={colors.dark} />
+                        </View>
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <T size={14} weight="medium">
+                            {n.title}
+                          </T>
+                          <T size={12} color={colors.muted}>
+                            {n.text}
+                          </T>
+                          <T size={12} color={colors.oceanBlue} style={{ alignSelf: 'flex-end' }}>
+                            {timeAndDate(n.date)}
+                          </T>
+                        </View>
+                        {!n.read && <View style={s.unread} />}
+                      </Pressable>
                     );
                   })}
-                </section>
+                </View>
               ))}
-            </>
+            </View>
           )
         }
       </Loadable>
@@ -82,63 +91,8 @@ export function Notifications() {
   );
 }
 
-const GroupTitle = styled.h3`
-  font-size: 14px;
-  font-weight: 500;
-  margin: 14px 0 6px;
-`;
-
-const Item = styled.button<{ $unread: boolean }>`
-  display: flex;
-  gap: 14px;
-  width: 100%;
-  text-align: left;
-  padding: 14px 0;
-  border-bottom: 1px solid ${colors.primary};
-  position: relative;
-
-  &::after {
-    content: '';
-    display: ${({ $unread }) => ($unread ? 'block' : 'none')};
-    position: absolute;
-    top: 18px;
-    right: 0;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: ${colors.oceanBlue};
-  }
-`;
-
-const IconBox = styled.span`
-  width: 37px;
-  height: 37px;
-  border-radius: 13px;
-  background: ${colors.primary};
-  color: ${colors.dark};
-  display: grid;
-  place-items: center;
-  flex: none;
-`;
-
-const Body = styled.div`
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-
-  b {
-    font-size: 14px;
-    font-weight: 500;
-  }
-  p {
-    font-size: 12px;
-    color: ${colors.muted};
-  }
-  time {
-    align-self: flex-end;
-    font-size: 12px;
-    color: ${colors.oceanBlue};
-  }
-`;
+const s = StyleSheet.create({
+  item: { flexDirection: 'row', gap: 14, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.primary },
+  iconBox: { width: 37, height: 37, borderRadius: 13, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  unread: { position: 'absolute', top: 18, right: 0, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.oceanBlue },
+});

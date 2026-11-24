@@ -1,8 +1,9 @@
+import { Check } from 'lucide-react-native';
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
-import styled from 'styled-components';
+import { Pressable, View } from 'react-native';
 import { Screen } from '@/components/Screen';
-import { Button, SectionTitle, Stack } from '@/components/ui';
+import { Button, Card, Row, SectionTitle, Stack, T } from '@/components/ui';
+import { useNav } from '@/navigation/types';
 import { colors } from '@/theme';
 
 const sections = [
@@ -15,53 +16,40 @@ const sections = [
 
 /** 9.5. Условия использования */
 export function Terms() {
-  const navigate = useNavigate();
+  const navigation = useNav();
   const [accepted, setAccepted] = useState(false);
   return (
-    <Screen nav back="/profile/security" title="Условия использования">
-      <Stack $gap={18}>
-        <SectionTitle style={{ fontSize: 17 }}>Пожалуйста, прочитайте условия</SectionTitle>
-        <List>
-          {sections.map((s) => (
-            <li key={s}>{s}</li>
+    <Screen tab="Profile" back title="Условия использования">
+      <Stack gap={18}>
+        <SectionTitle size={17}>Пожалуйста, прочитайте условия</SectionTitle>
+        <Card style={{ gap: 10 }}>
+          {sections.map((text, i) => (
+            <T key={text} size={13} style={{ lineHeight: 19 }}>
+              {i + 1}. {text}
+            </T>
           ))}
-        </List>
-        <Check>
-          <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />Я принимаю
-          условия использования
-        </Check>
-        <Stack $center>
-          <Button disabled={!accepted} onClick={() => navigate('/profile/security')}>
-            Принять
-          </Button>
-        </Stack>
+        </Card>
+        <Pressable onPress={() => setAccepted(!accepted)} accessibilityRole="checkbox" accessibilityState={{ checked: accepted }}>
+          <Row gap={10}>
+            <View
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 5,
+                borderWidth: 2,
+                borderColor: colors.primary,
+                backgroundColor: accepted ? colors.primary : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {accepted && <Check size={14} color={colors.white} strokeWidth={3} />}
+            </View>
+            <T size={13}>Я принимаю условия использования</T>
+          </Row>
+        </Pressable>
+        <Button title="Принять" disabled={!accepted} onPress={() => navigation.goBack()} />
       </Stack>
     </Screen>
   );
 }
-
-const List = styled.ol`
-  margin: 0;
-  padding: 18px 18px 18px 36px;
-  background: ${colors.lightGreen};
-  border-radius: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  font-size: 13px;
-  line-height: 1.5;
-`;
-
-const Check = styled.label`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  cursor: pointer;
-
-  input {
-    width: 18px;
-    height: 18px;
-    accent-color: ${colors.primary};
-  }
-`;

@@ -1,36 +1,44 @@
 import type { Summary } from '@finwise/shared';
-import { ArrowDownRight, ArrowUpRight, SquareCheck } from 'lucide-react';
-import styled from 'styled-components';
+import { ArrowDownRight, ArrowUpRight, SquareCheck } from 'lucide-react-native';
+import { StyleSheet, View } from 'react-native';
 import { colors } from '@/theme';
 import { money } from '@/utils/format';
+import { Row, T } from './ui';
 
-/** Блок из шапки: «Общий баланс / Общие расходы» + полоса лимита */
+/** Блок из шапки: «Общий баланс / Расходы за месяц» + полоса лимита */
 export function BalanceSummary({ summary }: { summary: Summary | undefined }) {
-  const s = summary;
-  const percent = s ? Math.min(100, s.expensePercent) : 0;
+  const percent = summary ? Math.min(100, summary.expensePercent) : 0;
   return (
-    <Wrap>
-      <Cols>
-        <Col>
-          <Label>
-            <ArrowUpRight size={13} strokeWidth={2.4} /> Общий баланс
-          </Label>
-          <Value>{s ? money(s.totalBalance) : '…'}</Value>
-        </Col>
-        <Sep />
-        <Col>
-          <Label>
-            <ArrowDownRight size={13} strokeWidth={2.4} /> Расходы за месяц
-          </Label>
-          <Value $blue>{s ? money(s.monthExpense, { negative: true }) : '…'}</Value>
-        </Col>
-      </Cols>
-      <LimitBar percent={percent} limit={s?.budgetLimit ?? 0} />
-      <Caption>
-        <SquareCheck size={14} strokeWidth={2.2} />
-        {s ? captionFor(s.expensePercent) : 'Загрузка…'}
-      </Caption>
-    </Wrap>
+    <View style={{ marginTop: 26, gap: 14 }}>
+      <View style={{ flexDirection: 'row', gap: 18 }}>
+        <View style={{ flex: 1 }}>
+          <Row gap={5}>
+            <ArrowUpRight size={13} strokeWidth={2.4} color={colors.dark} />
+            <T size={12}>Общий баланс</T>
+          </Row>
+          <T size={21} weight="bold" color={colors.white} numberOfLines={1} adjustsFontSizeToFit style={{ marginTop: 4 }}>
+            {summary ? money(summary.totalBalance) : '…'}
+          </T>
+        </View>
+        <View style={{ width: 1, backgroundColor: colors.lightGreen }} />
+        <View style={{ flex: 1 }}>
+          <Row gap={5}>
+            <ArrowDownRight size={13} strokeWidth={2.4} color={colors.dark} />
+            <T size={12}>Расходы за месяц</T>
+          </Row>
+          <T size={21} weight="bold" color={colors.oceanBlue} numberOfLines={1} adjustsFontSizeToFit style={{ marginTop: 4 }}>
+            {summary ? money(summary.monthExpense, { negative: true }) : '…'}
+          </T>
+        </View>
+      </View>
+      <LimitBar percent={percent} limit={summary?.budgetLimit ?? 0} />
+      <Row gap={8}>
+        <SquareCheck size={14} strokeWidth={2.2} color={colors.dark} />
+        <T size={13} style={{ flex: 1 }}>
+          {summary ? captionFor(summary.expensePercent) : 'Загрузка…'}
+        </T>
+      </Row>
+    </View>
   );
 }
 
@@ -43,87 +51,21 @@ function captionFor(p: number): string {
 
 export function LimitBar({ percent, limit }: { percent: number; limit: number }) {
   return (
-    <Bar role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
-      <Fill style={{ width: `${Math.max(percent, 14)}%` }}>{percent}%</Fill>
-      <LimitText>{money(limit)}</LimitText>
-    </Bar>
+    <View style={s.bar} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: percent }}>
+      <View style={[s.fill, { width: `${Math.max(percent, 14)}%` }]}>
+        <T size={12} color={colors.white}>
+          {percent}%
+        </T>
+      </View>
+      <T size={13} weight="medium" style={s.limit}>
+        {money(limit)}
+      </T>
+    </View>
   );
 }
 
-const Wrap = styled.div`
-  margin-top: 26px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-`;
-
-const Cols = styled.div`
-  display: flex;
-  align-items: stretch;
-  gap: 18px;
-`;
-
-const Col = styled.div`
-  flex: 1;
-  min-width: 0;
-`;
-
-const Sep = styled.span`
-  width: 1px;
-  background: ${colors.lightGreen};
-`;
-
-const Label = styled.p`
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  color: ${colors.dark};
-`;
-
-const Value = styled.p<{ $blue?: boolean }>`
-  margin-top: 4px;
-  font-size: clamp(17px, 5.4vw, 23px);
-  font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: ${({ $blue }) => ($blue ? colors.oceanBlue : colors.white)};
-`;
-
-const Bar = styled.div`
-  position: relative;
-  height: 27px;
-  border-radius: 14px;
-  background: ${colors.honeydew};
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-`;
-
-const Fill = styled.div`
-  height: 100%;
-  border-radius: 14px;
-  background: ${colors.void};
-  color: ${colors.white};
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  padding-left: 16px;
-  transition: width 0.6s ease;
-`;
-
-const LimitText = styled.span`
-  position: absolute;
-  right: 16px;
-  font-size: 13px;
-  font-weight: 500;
-  font-style: italic;
-`;
-
-const Caption = styled.p`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-`;
+const s = StyleSheet.create({
+  bar: { height: 27, borderRadius: 14, backgroundColor: colors.honeydew, overflow: 'hidden', justifyContent: 'center' },
+  fill: { height: '100%', borderRadius: 14, backgroundColor: colors.void, justifyContent: 'center', paddingLeft: 16 },
+  limit: { position: 'absolute', right: 16, fontStyle: 'italic' },
+});

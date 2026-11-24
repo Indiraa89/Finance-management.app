@@ -1,14 +1,14 @@
-import { useNavigate } from 'react-router';
 import { BarChart, ChartCard } from '@/components/charts';
 import { Screen } from '@/components/Screen';
 import { TransactionList } from '@/components/TransactionRow';
 import { Loadable, Stack } from '@/components/ui';
 import { useCategories, useQuickAnalysis, useTransactions } from '@/hooks/queries';
+import { useNav } from '@/navigation/types';
 import { SavingsCard } from './SavingsCard';
 
 /** 7-A. Быстрый анализ */
 export function QuickAnalysis() {
-  const navigate = useNavigate();
+  const navigation = useNav();
   const quick = useQuickAnalysis();
   const categories = useCategories();
   const transactions = useTransactions({ limit: 4 });
@@ -16,14 +16,14 @@ export function QuickAnalysis() {
 
   return (
     <Screen
-      nav
+      tab={null}
       back
       title="Быстрый анализ"
       top={
         q && (
           <SavingsCard
             flat
-            to="/savings"
+            onPress={() => navigation.navigate('Savings')}
             progress={q.savingsProgress}
             goalName={q.savingsGoalName}
             revenueLastWeek={q.revenueLastWeek}
@@ -32,7 +32,7 @@ export function QuickAnalysis() {
         )
       }
     >
-      <Stack $gap={26}>
+      <Stack gap={26}>
         <Loadable query={quick}>
           {(data) => (
             <ChartCard title={data.title}>
@@ -45,7 +45,7 @@ export function QuickAnalysis() {
             <TransactionList
               items={items}
               categories={categories.data}
-              onSelect={(tx) => navigate(`/transactions/${tx.id}`)}
+              onSelect={(tx) => navigation.navigate('TransactionDetails', { id: tx.id })}
             />
           )}
         </Loadable>

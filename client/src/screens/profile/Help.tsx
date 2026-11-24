@@ -1,10 +1,11 @@
 import type { FaqItem } from '@finwise/shared';
-import { ChevronDown, MessageCircle } from 'lucide-react';
+import { ChevronDown, MessageCircle } from 'lucide-react-native';
 import { useState } from 'react';
-import styled from 'styled-components';
+import { Pressable, View } from 'react-native';
 import { Screen } from '@/components/Screen';
-import { Empty, Loadable, Segmented, Stack, inputStyles } from '@/components/ui';
+import { Empty, Loadable, Segmented, Stack, T, TextField } from '@/components/ui';
 import { useFaq } from '@/hooks/queries';
+import { useNav } from '@/navigation/types';
 import { colors } from '@/theme';
 import { Menu, MenuRow } from './common';
 
@@ -13,6 +14,7 @@ type Group = FaqItem['group'];
 
 /** 9.5. Помощь: вопросы и ответы + связь с поддержкой */
 export function Help() {
+  const navigation = useNav();
   const faq = useFaq();
   const [tab, setTab] = useState<Tab>('faq');
   const [group, setGroup] = useState<Group>('general');
@@ -21,12 +23,16 @@ export function Help() {
 
   return (
     <Screen
-      nav
-      back="/profile"
+      tab="Profile"
+      back
       title="Помощь и FAQ"
-      top={<Lead>Чем мы можем помочь?</Lead>}
+      top={
+        <T size={15} weight="medium" center style={{ marginTop: 16 }}>
+          Чем мы можем помочь?
+        </T>
+      }
     >
-      <Stack $gap={20}>
+      <Stack gap={20}>
         <Segmented
           value={tab}
           onChange={setTab}
@@ -47,73 +53,49 @@ export function Help() {
                 { value: 'services', label: 'Сервис' },
               ]}
             />
-            <SearchInput placeholder="Поиск по вопросам" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <TextField placeholder="Поиск по вопросам" value={search} onChangeText={setSearch} />
             <Loadable query={faq}>
               {(items) => {
                 const q = search.trim().toLowerCase();
-                const list = items.filter((i) =>
-                  q ? `${i.question} ${i.answer}`.toLowerCase().includes(q) : i.group === group,
-                );
+                const list = items.filter((i) => (q ? `${i.question} ${i.answer}`.toLowerCase().includes(q) : i.group === group));
                 if (list.length === 0) return <Empty>Ничего не найдено</Empty>;
                 return (
-                  <div>
-                    {list.map((i) => (
-                      <Item key={i.id}>
-                        <button onClick={() => setOpen(open === i.id ? null : i.id)} aria-expanded={open === i.id}>
-                          {i.question}
-                          <ChevronDown size={18} style={{ transform: open === i.id ? 'rotate(180deg)' : 'none' }} />
-                        </button>
-                        {open === i.id && <p>{i.answer}</p>}
-                      </Item>
-                    ))}
-                  </div>
+                  <View>
+                    {list.map((i) => {
+                      const expanded = open === i.id;
+                      return (
+                        <View key={i.id} style={{ borderBottomWidth: 1, borderBottomColor: colors.lightGreen }}>
+                          <Pressable
+                            onPress={() => setOpen(expanded ? null : i.id)}
+                            accessibilityState={{ expanded }}
+                            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 }}
+                          >
+                            <T size={14} weight="medium" style={{ flex: 1 }}>
+                              {i.question}
+                            </T>
+                            <View style={{ transform: [{ rotate: expanded ? '180deg' : '0deg' }] }}>
+                              <ChevronDown size={18} color={colors.dark} />
+                            </View>
+                          </Pressable>
+                          {expanded && (
+                            <T size={13} color={colors.muted} style={{ paddingBottom: 14, lineHeight: 19 }}>
+                              {i.answer}
+                            </T>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </View>
                 );
               }}
             </Loadable>
           </>
         ) : (
           <Menu>
-            <MenuRow icon={MessageCircle} label="Онлайн-поддержка" to="/profile/help/chat" chevron />
+            <MenuRow icon={MessageCircle} label="Онлайн-поддержка" chevron onPress={() => navigation.navigate('SupportChat')} />
           </Menu>
         )}
       </Stack>
     </Screen>
   );
 }
-
-const Lead = styled.p`
-  text-align: center;
-  font-size: 15px;
-  font-weight: 500;
-  margin-top: 16px;
-`;
-
-const SearchInput = styled.input`
-  ${inputStyles};
-`;
-
-const Item = styled.div`
-  border-bottom: 1px solid ${colors.lightGreen};
-
-  button {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 4px;
-    text-align: left;
-    font-size: 14px;
-    font-weight: 500;
-  }
-  svg {
-    flex: none;
-    transition: transform 0.2s;
-  }
-  p {
-    padding: 0 4px 14px;
-    font-size: 13px;
-    line-height: 1.5;
-    color: ${colors.muted};
-  }
-`;

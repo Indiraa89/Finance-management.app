@@ -1,23 +1,33 @@
 import type { TransactionType } from '@finwise/shared';
-import { useEffect, useState, type FormEvent } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useState } from 'react';
 import { Screen } from '@/components/Screen';
-import { Button, ErrorText, Segmented, SelectField, Stack, TextArea, TextField } from '@/components/ui';
+import { Button, ErrorText, Segmented, SelectField, Stack, TextField } from '@/components/ui';
 import { useCategories, useCreateTransaction } from '@/hooks/queries';
+import { useNav, useParams } from '@/navigation/types';
 import { ymd } from '@/utils/format';
 
+/** Разбор даты ГГГГ-ММ-ДД; null — если дата введена неверно */
+export function parseDate(value: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!m) return null;
+  const now = new Date();
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), now.getHours(), now.getMinutes());
+  return d.getMonth() === Number(m[2]) - 1 ? d : null;
+}
+
 /**
- * Экран «Добавить расход/доход» (9.4, кнопка в категории).
- * Параметры: ?type=expense&categoryId=...
+ * «Добавить расход/доход» (кнопка в категории и плюс в «Транзакциях»).
+ * Параметры: type и categoryId.
  */
 export function AddTransaction() {
-  const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const navigation = useNav();
+  const params = useParams<'AddTransaction'>();
   const categories = useCategories();
   const create = useCreateTransaction();
+  const lockedCategory = params?.categoryId;
 
-  const [type, setType] = useState<TransactionType>((params.get('type') as TransactionType) || 'expense');
-  const [categoryId, setCategoryId] = useState(params.get('categoryId') ?? '');
+  const [type, setType] = useState<TransactionType>(params?.type ?? 'expense');
+  const [categoryId, setCategoryId] = useState(params?.categoryId ?? '');
   const [date, setDate] = useState(ymd(new Date()));
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
@@ -25,23 +35,19 @@ export function AddTransaction() {
   const [error, setError] = useState('');
 
   const options = (categories.data ?? []).filter((c) => c.type === type);
-  const lockedCategory = params.get('categoryId');
 
-  // при смене типа сбрасываем категорию, если она не подходит
-  useEffect(() => {
-    if (categoryId && categories.data && !options.some((c) => c.id === categoryId)) setCategoryId('');
-  }, [type, categories.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  const changeType = (t: TransactionType) => {
+    setType(t);
+    setCategoryId('');
+  };
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
+  const submit = async () => {
     setError('');
     const value = Number(amount.replace(',', '.').replace(/\s/g, ''));
+    const when = parseDate(date);
     if (!categoryId) return setError('Выберите категорию');
     if (!value || value <= 0) return setError('Введите сумму больше нуля');
-    // время берём текущее, дату — из поля
-    const now = new Date();
-    const [y, m, d] = date.split('-').map(Number);
-    const when = new Date(y, m - 1, d, now.getHours(), now.getMinutes());
+    if (!when) return setError('Дата в формате ГГГГ-ММ-ДД');
     try {
       await create.mutateAsync({
         type,
@@ -51,52 +57,45 @@ export function AddTransaction() {
         date: when.toISOString(),
         note,
       });
-      navigate(-1);
+      navigation.goBack();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не удалось сохранить');
     }
   };
 
   return (
-    <Screen back title={type === 'expense' ? 'Добавить расход' : 'Добавить доход'} sheetPadding="36px 32px 40px">
-      <form onSubmit={submit}>
-        <Stack $gap={18}>
-          {!lockedCategory && (
-            <Segmented
-              value={type}
-              onChange={setType}
-              options={[
-                { value: 'expense', label: 'Расход' },
-                { value: 'income', label: 'Доход' },
-              ]}
-            />
-          )}
-          <TextField label="Дата" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-          <SelectField
-            label="Категория"
-            placeholder="Выберите категорию"
-            value={categoryId}
-            onChange={setCategoryId}
-            options={options.map((c) => ({ value: c.id, label: c.name }))}
+    <Screen back title={type === 'expense' ? 'Добавить расход' : 'Добавить доход'} sheetStyle={{ paddingHorizontal: 32 }}>
+      <Stack gap={18}>
+        {!lockedCategory && (
+          <Segmented
+            value={type}
+            onChange={changeType}
+            options={[
+              { value: 'expense', label: 'Расход' },
+              { value: 'income', label: 'Доход' },
+            ]}
           />
-          <TextField
-            label="Сумма, ₸"
-            inputMode="decimal"
-            placeholder="0"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value.replace(/[^\d.,\s]/g, ''))}
-            required
-          />
-          <TextField label="Название" placeholder="Например: Ужин" value={title} onChange={(e) => setTitle(e.target.value)} />
-          <TextArea label="Заметка" placeholder="Необязательно" value={note} onChange={setNote} />
-          {error && <ErrorText>{error}</ErrorText>}
-          <Stack $center>
-            <Button type="submit" $small disabled={create.isPending}>
-              {create.isPending ? 'Сохраняем…' : 'Сохранить'}
-            </Button>
-          </Stack>
-        </Stack>
-      </form>
+        )}
+        <TextField label="Дата (ГГГГ-ММ-ДД)" value={date} onChangeText={setDate} />
+        <SelectField
+          label="Категория"
+          placeholder="Выберите категорию"
+          value={categoryId}
+          onChange={setCategoryId}
+          options={options.map((c) => ({ value: c.id, label: c.name }))}
+        />
+        <TextField
+          label="Сумма, ₸"
+          keyboardType="decimal-pad"
+          placeholder="0"
+          value={amount}
+          onChangeText={(v) => setAmount(v.replace(/[^\d.,\s]/g, ''))}
+        />
+        <TextField label="Название" placeholder="Например: Ужин" value={title} onChangeText={setTitle} />
+        <TextField label="Заметка" placeholder="Необязательно" value={note} onChangeText={setNote} multiline />
+        {error ? <ErrorText>{error}</ErrorText> : null}
+        <Button title={create.isPending ? 'Сохраняем…' : 'Сохранить'} small disabled={create.isPending} onPress={submit} />
+      </Stack>
     </Screen>
   );
 }

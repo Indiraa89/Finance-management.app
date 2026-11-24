@@ -6,6 +6,9 @@ build/
 .env.local
 server/data/
 .claude/
+.expo/
+web-build/
+expo-env.d.ts
 .DS_Store
 Thumbs.db
 *.log

@@ -1,101 +1,61 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router';
-import styled from 'styled-components';
+import { useState } from 'react';
+import { Pressable, View } from 'react-native';
 import { Screen } from '@/components/Screen';
-import { Button, ErrorText, Hint, PasswordField, Stack, TextField, TextLink } from '@/components/ui';
+import { Button, ErrorText, PasswordField, Stack, T, TextField, TextLink } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { useSubmit } from '@/hooks/useSubmit';
+import { useNav } from '@/navigation/types';
 import { colors } from '@/theme';
 
 /** 3.0-A. Вход */
 export function Login() {
-  const { login, canUseFingerprint } = useAuth();
-  const navigate = useNavigate();
-  const from = (useLocation().state as { from?: string } | null)?.from ?? '/home';
+  const { login, fingerprintAvailable } = useAuth();
+  const navigation = useNav();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { loading, error, run } = useSubmit();
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    const ok = await run(() => login({ email, password }));
-    if (ok) navigate(from, { replace: true });
-  };
+  // После успешного входа навигатор сам переключится на экраны приложения
+  const submit = () => run(() => login({ email, password }));
 
   return (
-    <Screen title="Добро пожаловать" bell={false} sheetPadding="56px 36px 40px">
-      <form onSubmit={submit}>
-        <Stack $gap={22}>
-          <TextField
-            label="E-mail"
-            type="email"
-            autoComplete="email"
-            placeholder="example@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <PasswordField
-            label="Пароль"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          {error && <ErrorText>{error}</ErrorText>}
-          <Stack $gap={12} $center style={{ marginTop: 18 }}>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Входим…' : 'Войти'}
-            </Button>
-            <TextLink type="button" onClick={() => navigate('/forgot')}>
-              Забыли пароль?
-            </TextLink>
-            <Button type="button" $variant="secondary" onClick={() => navigate('/signup')}>
-              Регистрация
-            </Button>
-            {canUseFingerprint() && (
-              <Small>
-                Войти по <Link to="/fingerprint">отпечатку пальца</Link>
-              </Small>
-            )}
-          </Stack>
-          <Demo>
-            Демо-аккаунт: <b>demo@finwise.kz</b> / <b>Demo1234</b>{' '}
-            <TextLink
-              type="button"
-              onClick={() => {
-                setEmail('demo@finwise.kz');
-                setPassword('Demo1234');
-              }}
-            >
-              подставить
-            </TextLink>
-          </Demo>
+    <Screen title="Добро пожаловать" bell={false} sheetStyle={{ paddingTop: 56, paddingHorizontal: 32 }}>
+      <Stack gap={22}>
+        <TextField
+          label="E-mail"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
+          placeholder="example@example.com"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <PasswordField label="Пароль" autoComplete="password" value={password} onChangeText={setPassword} onSubmitEditing={submit} />
+        {error ? <ErrorText>{error}</ErrorText> : null}
+        <Stack gap={12} center style={{ marginTop: 18 }}>
+          <Button title={loading ? 'Входим…' : 'Войти'} disabled={loading || !email || !password} onPress={submit} />
+          <TextLink title="Забыли пароль?" onPress={() => navigation.navigate('Forgot')} />
+          <Button title="Регистрация" variant="secondary" onPress={() => navigation.navigate('SignUp')} />
+          {fingerprintAvailable && (
+            <TextLink title="Войти по отпечатку пальца" color={colors.oceanBlue} onPress={() => navigation.navigate('FingerprintLogin')} />
+          )}
         </Stack>
-      </form>
+        <View style={{ backgroundColor: colors.lightGreen, borderRadius: 14, padding: 12, alignItems: 'center', gap: 4 }}>
+          <T size={12} center>
+            Демо-аккаунт: <T size={12} weight="bold">demo@finwise.kz</T> / <T size={12} weight="bold">Demo1234</T>
+          </T>
+          <Pressable
+            onPress={() => {
+              setEmail('demo@finwise.kz');
+              setPassword('Demo1234');
+            }}
+          >
+            <T size={12} weight="semibold" color={colors.oceanBlue}>
+              подставить
+            </T>
+          </Pressable>
+        </View>
+      </Stack>
     </Screen>
   );
 }
-
-export const Small = styled.p`
-  font-size: 13px;
-  color: ${colors.dark};
-
-  a {
-    color: ${colors.oceanBlue};
-    font-weight: 500;
-  }
-`;
-
-const Demo = styled(Hint)`
-  text-align: center;
-  background: ${colors.lightGreen};
-  border-radius: 14px;
-  padding: 10px 12px;
-  color: ${colors.dark};
-
-  button {
-    color: ${colors.oceanBlue};
-    font-size: 12px;
-  }
-`;

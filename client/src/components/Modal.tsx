@@ -1,6 +1,7 @@
-import { useEffect, type ReactNode } from 'react';
-import styled from 'styled-components';
+import type { ReactNode } from 'react';
+import { Modal as RNModal, Pressable, StyleSheet, View } from 'react-native';
 import { colors } from '@/theme';
+import { T } from './ui';
 
 /** Всплывающее окно поверх экрана (выход, удаление, новая категория…) */
 export function Modal({
@@ -14,48 +15,34 @@ export function Modal({
   onClose: () => void;
   children: ReactNode;
 }) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
-
-  if (!open) return null;
   return (
-    <Overlay onClick={onClose}>
-      <Card role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
-        <h2>{title}</h2>
-        {children}
-      </Card>
-    </Overlay>
+    <RNModal visible={open} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={s.overlay} onPress={onClose}>
+        {/* Нажатие по самой карточке не закрывает окно */}
+        <Pressable style={s.card} onPress={() => undefined}>
+          <T size={20} weight="semibold" center>
+            {title}
+          </T>
+          {children}
+        </Pressable>
+      </Pressable>
+    </RNModal>
   );
 }
 
-const Overlay = styled.div`
-  position: absolute;
-  inset: 0;
-  z-index: 100;
-  background: rgba(9, 48, 48, 0.45);
-  display: grid;
-  place-items: center;
-  padding: 24px;
-`;
+const s = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: colors.overlay, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  card: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: colors.honeydew,
+    borderRadius: 24,
+    paddingVertical: 30,
+    paddingHorizontal: 26,
+    gap: 16,
+    alignItems: 'center',
+  },
+});
 
-const Card = styled.div`
-  width: 100%;
-  max-width: 340px;
-  background: ${colors.honeydew};
-  border-radius: 24px;
-  padding: 30px 28px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  text-align: center;
-
-  h2 {
-    font-size: 20px;
-    font-weight: 600;
-  }
-`;
+/** Полоса на всю ширину внутри модального окна */
+export const FullWidth = ({ children }: { children: ReactNode }) => <View style={{ alignSelf: 'stretch', gap: 12 }}>{children}</View>;

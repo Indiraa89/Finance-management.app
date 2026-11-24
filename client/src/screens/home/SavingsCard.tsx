@@ -1,8 +1,8 @@
-import { PiggyBank } from 'lucide-react';
-import { Link } from 'react-router';
-import styled from 'styled-components';
+import { PiggyBank } from 'lucide-react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { Ring } from '@/components/charts';
+import { T } from '@/components/ui';
 import { colors } from '@/theme';
 import { money } from '@/utils/format';
 
@@ -11,122 +11,66 @@ interface Props {
   goalName: string;
   revenueLastWeek: number;
   foodLastWeek: number;
-  /** Если задано — карточка становится ссылкой */
-  to?: string;
+  onPress?: () => void;
   /** Без своей подложки (для зелёной шапки «Быстрого анализа») */
   flat?: boolean;
 }
 
 /** Зелёная карточка: прогресс накоплений + доход и еда за неделю */
-export function SavingsCard({ progress, goalName, revenueLastWeek, foodLastWeek, to, flat }: Props) {
-  const content = (
-    <>
-      <Left>
+export function SavingsCard({ progress, goalName, revenueLastWeek, foodLastWeek, onPress, flat }: Props) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={[s.card, flat ? { backgroundColor: 'transparent', paddingHorizontal: 0, paddingBottom: 0 } : null]}
+    >
+      <View style={s.left}>
         <Ring percent={progress} size={74} stroke={4}>
           <PiggyBank size={30} color={colors.dark} strokeWidth={1.6} />
         </Ring>
-        <Caption>
-          Накопления
-          <br />
-          {goalName} · {progress}%
-        </Caption>
-      </Left>
-      <Divider />
-      <Right>
-        <Line>
-          <CategoryIcon icon="salary" size={36} bg="transparent" />
-          <div>
-            <Small>Доход за неделю</Small>
-            <Big>{money(revenueLastWeek)}</Big>
-          </div>
-        </Line>
-        <HLine />
-        <Line>
-          <CategoryIcon icon="food" size={36} bg="transparent" />
-          <div>
-            <Small>Еда за неделю</Small>
-            <Big $blue>{money(foodLastWeek, { negative: foodLastWeek > 0 })}</Big>
-          </div>
-        </Line>
-      </Right>
-    </>
+        <T size={11} weight="medium" center>
+          {`Накопления\n${goalName} · ${progress}%`}
+        </T>
+      </View>
+      <View style={s.divider} />
+      <View style={{ flex: 1, gap: 8 }}>
+        <View style={s.line}>
+          <CategoryIcon icon="salary" size={36} bg="transparent" color={colors.dark} />
+          <View style={{ flex: 1 }}>
+            <T size={12}>Доход за неделю</T>
+            <T size={15} weight="bold" numberOfLines={1}>
+              {money(revenueLastWeek)}
+            </T>
+          </View>
+        </View>
+        <View style={s.hline} />
+        <View style={s.line}>
+          <CategoryIcon icon="food" size={36} bg="transparent" color={colors.dark} />
+          <View style={{ flex: 1 }}>
+            <T size={12}>Еда за неделю</T>
+            <T size={15} weight="bold" color={colors.oceanBlue} numberOfLines={1}>
+              {money(foodLastWeek, { negative: foodLastWeek > 0 })}
+            </T>
+          </View>
+        </View>
+      </View>
+    </Pressable>
   );
-
-  if (to)
-    return (
-      <Card as={Link} to={to} $flat={flat}>
-        {content}
-      </Card>
-    );
-  return <Card $flat={flat}>{content}</Card>;
 }
 
-const Card = styled.div<{ $flat?: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  background: ${({ $flat }) => ($flat ? 'transparent' : colors.primary)};
-  border-radius: 31px;
-  padding: ${({ $flat }) => ($flat ? '18px 0 0' : '20px 24px')};
-  color: ${colors.dark};
-
-  /* иконки в карточке — тёмные, без кружка */
-  svg {
-    color: ${colors.dark};
-    stroke: ${colors.dark};
-  }
-`;
-
-const Left = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  flex: none;
-  width: 92px;
-`;
-
-const Caption = styled.p`
-  font-size: 11px;
-  font-weight: 500;
-  text-align: center;
-  line-height: 1.3;
-`;
-
-const Divider = styled.span`
-  width: 2px;
-  align-self: stretch;
-  background: ${colors.honeydew};
-  border-radius: 1px;
-`;
-
-const Right = styled.div`
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
-const Line = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-`;
-
-const HLine = styled.span`
-  height: 2px;
-  background: ${colors.honeydew};
-  border-radius: 1px;
-`;
-
-const Small = styled.p`
-  font-size: 12px;
-`;
-
-const Big = styled.p<{ $blue?: boolean }>`
-  font-size: 15px;
-  font-weight: 700;
-  color: ${({ $blue }) => ($blue ? colors.oceanBlue : colors.dark)};
-  white-space: nowrap;
-`;
+const s = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: colors.primary,
+    borderRadius: 31,
+    paddingVertical: 20,
+    paddingHorizontal: 22,
+    marginTop: 0,
+  },
+  left: { width: 92, alignItems: 'center', gap: 6 },
+  divider: { width: 2, alignSelf: 'stretch', backgroundColor: colors.honeydew, borderRadius: 1 },
+  line: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  hline: { height: 2, backgroundColor: colors.honeydew, borderRadius: 1 },
+});

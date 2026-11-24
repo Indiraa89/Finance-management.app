@@ -1,8 +1,10 @@
 import type { ChartPoint } from '@finwise/shared';
 import type { ReactNode } from 'react';
-import styled from 'styled-components';
-import { colors } from '@/theme';
+import { Pressable, StyleSheet, View } from 'react-native';
+import Svg, { Circle, G, Path, Text as SvgText } from 'react-native-svg';
+import { colors, fonts } from '@/theme';
 import { shortMoney } from '@/utils/format';
+import { T } from './ui';
 
 /* ================= Столбчатая диаграмма ================= */
 
@@ -16,158 +18,66 @@ function niceMax(v: number): number {
 }
 
 /** Доходы (зелёные) и расходы (синие) столбиками, как в разделе «Анализ» */
-export function BarChart({
-  points,
-  showIncome = true,
-  height = 150,
-}: {
-  points: ChartPoint[];
-  showIncome?: boolean;
-  height?: number;
-}) {
-  const max = niceMax(
-    Math.max(...points.map((p) => Math.max(showIncome ? p.income : 0, p.expense)), 0),
-  );
+export function BarChart({ points, height = 150 }: { points: ChartPoint[]; height?: number }) {
+  const max = niceMax(Math.max(...points.map((p) => Math.max(p.income, p.expense)), 0));
   const ticks = [max, (max * 2) / 3, max / 3, 0];
 
   return (
-    <Chart>
-      <YAxis style={{ height }}>
+    <View style={{ flexDirection: 'row', gap: 8 }}>
+      <View style={{ height, justifyContent: 'space-between', minWidth: 30, marginTop: -6 }}>
         {ticks.map((t) => (
-          <span key={t}>{shortMoney(t)}</span>
+          <T key={t} size={10} color={colors.lightBlue} style={{ textAlign: 'right' }}>
+            {shortMoney(t)}
+          </T>
         ))}
-      </YAxis>
-      <Plot>
-        <Bars style={{ height }}>
+      </View>
+      <View style={{ flex: 1 }}>
+        <View style={{ height, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-around' }}>
           {ticks.map((t, i) => (
-            <GridLine key={t} style={{ top: `${(i / 3) * 100}%` }} />
+            <View key={t} style={[s.grid, { top: `${(i / 3) * 100}%` }]} />
           ))}
           {points.map((p) => (
-            <Group key={p.label} title={`${p.label}: доход ${shortMoney(p.income)}, расход ${shortMoney(p.expense)}`}>
-              {showIncome && <Bar $color={colors.primary} style={{ height: `${(p.income / max) * 100}%` }} />}
-              <Bar $color={colors.oceanBlue} style={{ height: `${(p.expense / max) * 100}%` }} />
-            </Group>
+            <View key={p.label} style={{ height: '100%', flexDirection: 'row', alignItems: 'flex-end', gap: 3 }}>
+              <View style={[s.bar, { backgroundColor: colors.primary, height: `${(p.income / max) * 100}%` }]} />
+              <View style={[s.bar, { backgroundColor: colors.oceanBlue, height: `${(p.expense / max) * 100}%` }]} />
+            </View>
           ))}
-        </Bars>
-        <XAxis>
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 8 }}>
           {points.map((p) => (
-            <span key={p.label}>{p.label}</span>
+            <T key={p.label} size={10}>
+              {p.label}
+            </T>
           ))}
-        </XAxis>
-      </Plot>
-    </Chart>
+        </View>
+      </View>
+    </View>
   );
 }
-
-const Chart = styled.div`
-  display: flex;
-  gap: 8px;
-`;
-
-const YAxis = styled.div`
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  font-size: 11px;
-  color: ${colors.lightBlue};
-  text-align: right;
-  min-width: 28px;
-  transform: translateY(-6px);
-`;
-
-const Plot = styled.div`
-  flex: 1;
-  min-width: 0;
-`;
-
-const Bars = styled.div`
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-around;
-`;
-
-const GridLine = styled.span`
-  position: absolute;
-  left: 0;
-  right: 0;
-  border-top: 1px dashed ${colors.lightBlue};
-  opacity: 0.6;
-`;
-
-const Group = styled.div`
-  position: relative;
-  height: 100%;
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-`;
-
-const Bar = styled.span<{ $color: string }>`
-  width: 7px;
-  min-height: 2px;
-  border-radius: 6px 6px 2px 2px;
-  background: ${({ $color }) => $color};
-  transition: height 0.5s ease;
-`;
-
-const XAxis = styled.div`
-  display: flex;
-  justify-content: space-around;
-  margin-top: 8px;
-  font-size: 11px;
-  color: ${colors.dark};
-`;
 
 /* ================= Карточка графика ================= */
 
-export function ChartCard({
-  title,
-  actions,
-  children,
-}: {
-  title: string;
-  actions?: ReactNode;
-  children: ReactNode;
-}) {
+export function ChartCard({ title, actions, children }: { title: string; actions?: ReactNode; children: ReactNode }) {
   return (
-    <Card>
-      <CardHead>
-        <h3>{title}</h3>
-        <div style={{ display: 'flex', gap: 8 }}>{actions}</div>
-      </CardHead>
+    <View style={s.card}>
+      <View style={s.cardHead}>
+        <T size={15} weight="semibold">
+          {title}
+        </T>
+        <View style={{ flexDirection: 'row', gap: 8 }}>{actions}</View>
+      </View>
       {children}
-    </Card>
+    </View>
   );
 }
 
-export const SmallIconButton = styled.button`
-  width: 32px;
-  height: 30px;
-  border-radius: 10px;
-  background: ${colors.primary};
-  display: grid;
-  place-items: center;
-  color: ${colors.dark};
-`;
-
-const Card = styled.section`
-  background: ${colors.lightGreen};
-  border-radius: 40px;
-  padding: 22px 22px 18px;
-`;
-
-const CardHead = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 18px;
-
-  h3 {
-    font-size: 15px;
-    font-weight: 600;
-  }
-`;
+export function SmallIconButton({ onPress, label, children }: { onPress: () => void; label: string; children: ReactNode }) {
+  return (
+    <Pressable style={s.smallBtn} onPress={onPress} accessibilityLabel={label} accessibilityRole="button">
+      {children}
+    </Pressable>
+  );
+}
 
 /* ================= Круговой прогресс ================= */
 
@@ -190,10 +100,10 @@ export function Ring({
   const c = 2 * Math.PI * r;
   const p = Math.max(0, Math.min(100, percent));
   return (
-    <RingBox style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
-        <circle
+    <View style={{ width: size, height: size }}>
+      <Svg width={size} height={size}>
+        <Circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
+        <Circle
           cx={size / 2}
           cy={size / 2}
           r={r}
@@ -203,39 +113,25 @@ export function Ring({
           strokeLinecap="round"
           strokeDasharray={`${(c * p) / 100} ${c}`}
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
-          style={{ transition: 'stroke-dasharray 0.6s ease' }}
         />
-      </svg>
-      <RingCenter>{children}</RingCenter>
-    </RingBox>
+      </Svg>
+      <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>{children}</View>
+    </View>
   );
 }
-
-const RingBox = styled.div`
-  position: relative;
-  flex: none;
-`;
-
-const RingCenter = styled.div`
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-`;
 
 /* ================= Круговая диаграмма ================= */
 
 export const PIE_COLORS = [colors.oceanBlue, colors.lightBlue, colors.vividBlue, colors.primary, colors.dark, '#9AD7FF'];
 
 export function PieChart({ parts, size = 200 }: { parts: { label: string; value: number }[]; size?: number }) {
-  const total = parts.reduce((s, p) => s + p.value, 0);
+  const total = parts.reduce((sum, p) => sum + p.value, 0);
+  if (total === 0) return null;
   const r = size / 2;
   let angle = -Math.PI / 2;
 
-  if (total === 0) return null;
-
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Расходы по категориям">
+    <Svg width={size} height={size}>
       {parts.map((p, i) => {
         const share = p.value / total;
         const start = angle;
@@ -244,24 +140,23 @@ export function PieChart({ parts, size = 200 }: { parts: { label: string; value:
         const mid = (start + end) / 2;
         const color = PIE_COLORS[i % PIE_COLORS.length];
         const label = (
-          <text
+          <SvgText
             x={r + Math.cos(mid) * r * 0.62}
-            y={r + Math.sin(mid) * r * 0.62}
+            y={r + Math.sin(mid) * r * 0.62 + 5}
             fill={colors.white}
             fontSize={13}
-            fontWeight={600}
+            fontFamily={fonts.semibold}
             textAnchor="middle"
-            dominantBaseline="middle"
           >
-            {Math.round(share * 100)}%
-          </text>
+            {`${Math.round(share * 100)}%`}
+          </SvgText>
         );
         if (share >= 0.999) {
           return (
-            <g key={p.label}>
-              <circle cx={r} cy={r} r={r} fill={color} />
+            <G key={p.label}>
+              <Circle cx={r} cy={r} r={r} fill={color} />
               {label}
-            </g>
+            </G>
           );
         }
         const large = end - start > Math.PI ? 1 : 0;
@@ -272,12 +167,20 @@ export function PieChart({ parts, size = 200 }: { parts: { label: string; value:
           'Z',
         ].join(' ');
         return (
-          <g key={p.label}>
-            <path d={d} fill={color} stroke={colors.honeydew} strokeWidth={2} />
+          <G key={p.label}>
+            <Path d={d} fill={color} stroke={colors.honeydew} strokeWidth={2} />
             {share > 0.06 && label}
-          </g>
+          </G>
         );
       })}
-    </svg>
+    </Svg>
   );
 }
+
+const s = StyleSheet.create({
+  grid: { position: 'absolute', left: 0, right: 0, borderTopWidth: 1, borderStyle: 'dashed', borderColor: colors.lightBlue, opacity: 0.6 },
+  bar: { width: 7, minHeight: 2, borderTopLeftRadius: 6, borderTopRightRadius: 6, borderBottomLeftRadius: 2, borderBottomRightRadius: 2 },
+  card: { backgroundColor: colors.lightGreen, borderRadius: 40, padding: 22, paddingBottom: 18 },
+  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
+  smallBtn: { width: 32, height: 30, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+});

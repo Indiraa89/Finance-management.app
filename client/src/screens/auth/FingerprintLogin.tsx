@@ -1,35 +1,34 @@
-import { useNavigate } from 'react-router';
 import { FingerprintBadge } from '@/components/illustrations';
 import { Screen } from '@/components/Screen';
 import { Button, ErrorText, Hint, SectionTitle, Stack, TextLink } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { useSubmit } from '@/hooks/useSubmit';
+import { useNav } from '@/navigation/types';
 
-/** 3.3-A. Вход по отпечатку (в браузере — имитация: подтверждаем сохранённую сессию) */
+/** 3.3-A. Вход по отпечатку (учебная имитация: подтверждаем сохранённую сессию) */
 export function FingerprintLogin() {
-  const navigate = useNavigate();
+  const navigation = useNav();
   const { loginWithFingerprint } = useAuth();
   const { loading, error, run } = useSubmit();
 
-  const use = async () => {
-    const ok = await run(() => loginWithFingerprint());
-    if (ok) navigate('/home', { replace: true });
-  };
-
   return (
-    <Screen title="Вход по отпечатку" bell={false} back sheetPadding="48px 36px 40px">
-      <Stack $gap={22} $center>
+    <Screen title="Вход по отпечатку" bell={false} back sheetStyle={{ paddingTop: 48, paddingHorizontal: 32 }}>
+      <Stack gap={22} center>
         <FingerprintBadge />
-        <SectionTitle style={{ fontSize: 18 }}>Используйте отпечаток для входа</SectionTitle>
-        <Hint>
-          Приложите палец к сканеру — и вы в приложении без ввода пароля. В браузере нажмите кнопку
-          ниже, чтобы имитировать сканирование.
+        <SectionTitle size={18}>Используйте отпечаток для входа</SectionTitle>
+        <Hint center>
+          Приложите палец к сканеру — и вы в приложении без ввода пароля. В учебной версии нажмите кнопку ниже, чтобы
+          имитировать сканирование.
         </Hint>
-        {error && <ErrorText>{error}</ErrorText>}
-        <Button $variant="secondary" $block disabled={loading} onClick={use}>
-          {loading ? 'Сканируем…' : 'Использовать Touch ID'}
-        </Button>
-        <TextLink onClick={() => navigate('/login')}>Или войдите с паролем</TextLink>
+        {error ? <ErrorText>{error}</ErrorText> : null}
+        <Button
+          title={loading ? 'Сканируем…' : 'Использовать Touch ID'}
+          variant="secondary"
+          block
+          disabled={loading}
+          onPress={() => run(() => loginWithFingerprint())}
+        />
+        <TextLink title="Или войдите с паролем" onPress={() => navigation.navigate('Login')} />
       </Stack>
     </Screen>
   );

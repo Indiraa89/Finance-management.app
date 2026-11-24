@@ -1,13 +1,13 @@
 import type { Period } from '@finwise/shared';
-import { ArrowDownToLine, ArrowUpFromLine, CalendarDays, Search } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, CalendarDays, Search } from 'lucide-react-native';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
-import styled from 'styled-components';
+import { Pressable, View } from 'react-native';
 import { BalanceSummary } from '@/components/BalanceSummary';
 import { BarChart, ChartCard, Ring, SmallIconButton } from '@/components/charts';
 import { Screen } from '@/components/Screen';
-import { Loadable, SectionTitle, Segmented, Stack } from '@/components/ui';
+import { Loadable, SectionTitle, Segmented, Stack, T } from '@/components/ui';
 import { useAnalytics, useGoals, useSummary } from '@/hooks/queries';
+import { useNav } from '@/navigation/types';
 import { colors } from '@/theme';
 import { money } from '@/utils/format';
 
@@ -20,26 +20,26 @@ const periods: { value: Period; label: string }[] = [
 
 /** 9.2.1–9.2.4. Анализ по дням / неделям / месяцам / годам */
 export function Analysis() {
-  const navigate = useNavigate();
+  const navigation = useNav();
   const [period, setPeriod] = useState<Period>('daily');
   const summary = useSummary();
   const analytics = useAnalytics(period);
   const goals = useGoals();
 
   return (
-    <Screen nav back="/home" title="Анализ" top={<BalanceSummary summary={summary.data} />}>
-      <Stack $gap={26}>
+    <Screen tab="Analysis" back title="Анализ" top={<BalanceSummary summary={summary.data} />}>
+      <Stack gap={26}>
         <Segmented value={period} options={periods} onChange={setPeriod} />
 
         <ChartCard
           title="Доходы и расходы"
           actions={
             <>
-              <SmallIconButton aria-label="Поиск" onClick={() => navigate('/analysis/search')}>
-                <Search size={16} />
+              <SmallIconButton label="Поиск" onPress={() => navigation.navigate('Search')}>
+                <Search size={16} color={colors.dark} />
               </SmallIconButton>
-              <SmallIconButton aria-label="Календарь" onClick={() => navigate('/analysis/calendar')}>
-                <CalendarDays size={16} />
+              <SmallIconButton label="Календарь" onPress={() => navigation.navigate('Calendar')}>
+                <CalendarDays size={16} color={colors.dark} />
               </SmallIconButton>
             </>
           }
@@ -47,84 +47,53 @@ export function Analysis() {
           <Loadable query={analytics}>{(data) => <BarChart points={data.points} />}</Loadable>
         </ChartCard>
 
-        <Totals>
-          <Total>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+          <View style={{ alignItems: 'center', gap: 2 }}>
             <ArrowUpFromLine size={24} color={colors.primary} />
-            <span>Доход</span>
-            <b>{money(analytics.data?.income ?? 0)}</b>
-          </Total>
-          <Total>
+            <T size={14}>Доход</T>
+            <T size={18} weight="bold">
+              {money(analytics.data?.income ?? 0)}
+            </T>
+          </View>
+          <View style={{ alignItems: 'center', gap: 2 }}>
             <ArrowDownToLine size={24} color={colors.oceanBlue} />
-            <span>Расход</span>
-            <b style={{ color: colors.oceanBlue }}>{money(analytics.data?.expense ?? 0)}</b>
-          </Total>
-        </Totals>
+            <T size={14}>Расход</T>
+            <T size={18} weight="bold" color={colors.oceanBlue}>
+              {money(analytics.data?.expense ?? 0)}
+            </T>
+          </View>
+        </View>
 
-        <SectionTitle style={{ fontSize: 17 }}>Мои цели</SectionTitle>
+        <SectionTitle size={17}>Мои цели</SectionTitle>
         <Loadable query={goals}>
           {(list) => (
-            <Goals>
+            <View style={{ flexDirection: 'row', gap: 16 }}>
               {[...list]
                 .sort((a, b) => b.saved / b.target - a.saved / a.target)
                 .slice(0, 2)
                 .map((g) => {
                   const p = Math.round((g.saved / g.target) * 100);
                   return (
-                    <GoalCard key={g.id} to={`/savings/${g.id}`}>
+                    <Pressable
+                      key={g.id}
+                      onPress={() => navigation.navigate('GoalDetail', { id: g.id })}
+                      style={{ flex: 1, backgroundColor: colors.lightBlue, borderRadius: 30, paddingVertical: 18, alignItems: 'center', gap: 8 }}
+                    >
                       <Ring percent={p} size={86} stroke={6} track={colors.honeydew} color={colors.oceanBlue}>
-                        <b>{p}%</b>
+                        <T size={16} weight="bold" color={colors.white}>
+                          {p}%
+                        </T>
                       </Ring>
-                      <span>{g.name}</span>
-                    </GoalCard>
+                      <T weight="medium" color={colors.white}>
+                        {g.name}
+                      </T>
+                    </Pressable>
                   );
                 })}
-            </Goals>
+            </View>
           )}
         </Loadable>
       </Stack>
     </Screen>
   );
 }
-
-const Totals = styled.div`
-  display: flex;
-  justify-content: space-around;
-`;
-
-const Total = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-
-  span {
-    font-size: 14px;
-  }
-  b {
-    font-size: 18px;
-  }
-`;
-
-const Goals = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-`;
-
-const GoalCard = styled(Link)`
-  background: ${colors.lightBlue};
-  border-radius: 30px;
-  padding: 18px 10px 14px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  color: ${colors.white};
-
-  b {
-    font-size: 16px;
-  }
-  span {
-    font-weight: 500;
-  }
-`;

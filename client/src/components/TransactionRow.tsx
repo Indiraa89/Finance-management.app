@@ -1,33 +1,33 @@
 import type { Category, Transaction } from '@finwise/shared';
-import styled from 'styled-components';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { colors } from '@/theme';
 import { money, timeAndDate } from '@/utils/format';
 import { CategoryIcon } from './CategoryIcon';
-import { VDivider } from './ui';
+import { T, VDivider } from './ui';
 
 /** Строка транзакции: иконка · название и время · категория · сумма */
-export function TransactionRow({
-  tx,
-  category,
-  onClick,
-}: {
-  tx: Transaction;
-  category?: Category;
-  onClick?: () => void;
-}) {
+export function TransactionRow({ tx, category, onPress }: { tx: Transaction; category?: Category; onPress?: () => void }) {
   const expense = tx.type === 'expense';
   return (
-    <Item as={onClick ? 'button' : 'div'} onClick={onClick}>
-      <CategoryIcon icon={category?.icon ?? 'other'} size={46} radius={16} />
-      <Main>
-        <Name>{tx.title}</Name>
-        <Time>{timeAndDate(tx.date)}</Time>
-      </Main>
+    <Pressable style={s.item} onPress={onPress} disabled={!onPress} accessibilityRole={onPress ? 'button' : undefined}>
+      <CategoryIcon icon={category?.icon ?? 'other'} />
+      <View style={{ flex: 1.4, minWidth: 0 }}>
+        <T size={15} weight="medium" numberOfLines={1}>
+          {tx.title}
+        </T>
+        <T size={11} weight="semibold" color={colors.oceanBlue} numberOfLines={1}>
+          {timeAndDate(tx.date)}
+        </T>
+      </View>
       <VDivider />
-      <Cat>{category?.name ?? '—'}</Cat>
+      <T size={11} weight="light" center numberOfLines={1} style={{ flex: 0.9 }}>
+        {category?.name ?? '—'}
+      </T>
       <VDivider />
-      <Amount $expense={expense}>{money(tx.amount, { negative: expense })}</Amount>
-    </Item>
+      <T size={13} weight="medium" numberOfLines={1} color={expense ? colors.oceanBlue : colors.dark} style={{ flex: 1.1, textAlign: 'right' }}>
+        {money(tx.amount, { negative: expense })}
+      </T>
+    </Pressable>
   );
 }
 
@@ -42,69 +42,14 @@ export function TransactionList({
 }) {
   const byId = new Map(categories?.map((c) => [c.id, c]));
   return (
-    <List>
+    <View style={{ gap: 18 }}>
       {items.map((tx) => (
-        <TransactionRow
-          key={tx.id}
-          tx={tx}
-          category={byId.get(tx.categoryId)}
-          onClick={onSelect ? () => onSelect(tx) : undefined}
-        />
+        <TransactionRow key={tx.id} tx={tx} category={byId.get(tx.categoryId)} onPress={onSelect ? () => onSelect(tx) : undefined} />
       ))}
-    </List>
+    </View>
   );
 }
 
-const List = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-`;
-
-const Item = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  text-align: left;
-`;
-
-const Main = styled.div`
-  flex: 1.4;
-  min-width: 0;
-`;
-
-const Name = styled.p`
-  font-size: 15px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-const Time = styled.p`
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-  color: ${colors.oceanBlue};
-`;
-
-const Cat = styled.p`
-  flex: 0.9;
-  min-width: 0;
-  font-size: 11px;
-  font-weight: 300;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-const Amount = styled.p<{ $expense: boolean }>`
-  flex: 1.1;
-  text-align: right;
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  color: ${({ $expense }) => ($expense ? colors.oceanBlue : colors.dark)};
-`;
+const s = StyleSheet.create({
+  item: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+});

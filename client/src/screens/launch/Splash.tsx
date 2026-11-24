@@ -1,45 +1,27 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router';
-import styled, { keyframes } from 'styled-components';
-import { Logo } from '@/components/illustrations';
+import { useEffect, useRef } from 'react';
+import { Animated } from 'react-native';
+import { Logo, LogoMark } from '@/components/illustrations';
 import { FullScreen } from '@/components/Screen';
-import { useAuth } from '@/context/AuthContext';
 
-export const ONBOARDING_KEY = 'finwise.onboardingDone';
-
-/** 1-A. Сплэш: зелёный экран с логотипом, через 1,8 с — дальше */
-export function Splash() {
-  const navigate = useNavigate();
-  const { user, loading } = useAuth();
+/** 1-A. Сплэш: зелёный экран с логотипом, пока приложение загружается */
+export function Splash({ fontsLoaded }: { fontsLoaded: boolean }) {
+  const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (loading) return;
-    const id = setTimeout(() => {
-      let onboardingDone = false;
-      try {
-        onboardingDone = localStorage.getItem(ONBOARDING_KEY) === '1';
-      } catch {
-        /* хранилище недоступно */
-      }
-      navigate(user ? '/home' : onboardingDone ? '/welcome' : '/onboarding', { replace: true });
-    }, 1800);
-    return () => clearTimeout(id);
-  }, [loading, user, navigate]);
+    Animated.timing(anim, { toValue: 1, duration: 700, useNativeDriver: true }).start();
+  }, [anim]);
 
   return (
     <FullScreen>
-      <Pop>
-        <Logo />
-      </Pop>
+      <Animated.View
+        style={{
+          opacity: anim,
+          transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }],
+        }}
+      >
+        {/* Пока шрифт не загружен, показываем только значок — без «прыжка» текста */}
+        {fontsLoaded ? <Logo /> : <LogoMark />}
+      </Animated.View>
     </FullScreen>
   );
 }
-
-const pop = keyframes`
-  from { opacity: 0; transform: scale(0.85); }
-  to   { opacity: 1; transform: scale(1); }
-`;
-
-const Pop = styled.div`
-  animation: ${pop} 0.7s ease-out both;
-`;

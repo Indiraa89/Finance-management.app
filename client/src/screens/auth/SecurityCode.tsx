@@ -1,50 +1,44 @@
 import { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router';
 import { authApi } from '@/api';
 import { PinInput } from '@/components/PinInput';
 import { Screen } from '@/components/Screen';
-import { Button, ErrorText, Hint, SectionTitle, Stack } from '@/components/ui';
+import { Button, ErrorText, Hint, SectionTitle, Stack, T } from '@/components/ui';
 import { useSubmit } from '@/hooks/useSubmit';
+import { useNav, useParams } from '@/navigation/types';
 
 /** 3.2-A. Ввод 6-значного кода безопасности */
 export function SecurityCode() {
-  const navigate = useNavigate();
-  const state = useLocation().state as { email: string; demoCode: string } | null;
+  const navigation = useNav();
+  const { email, demoCode: firstCode } = useParams<'SecurityCode'>();
   const [code, setCode] = useState('');
-  const [demoCode, setDemoCode] = useState(state?.demoCode ?? '');
+  const [demoCode, setDemoCode] = useState(firstCode);
   const { loading, error, run } = useSubmit();
-
-  if (!state?.email) return <Navigate to="/forgot" replace />;
 
   const accept = () =>
     run(async () => {
-      const { resetToken } = await authApi.verifyCode(state.email, code);
-      navigate('/forgot/new-password', { replace: true, state: { resetToken } });
+      const { resetToken } = await authApi.verifyCode(email, code);
+      navigation.replace('NewPassword', { resetToken });
     });
 
   const resend = () =>
     run(async () => {
-      const res = await authApi.forgotPassword(state.email);
+      const res = await authApi.forgotPassword(email);
       setDemoCode(res.demoCode);
       setCode('');
     });
 
   return (
-    <Screen title="Код безопасности" bell={false} back sheetPadding="56px 32px 40px">
-      <Stack $gap={30} $center>
-        <SectionTitle style={{ fontSize: 18 }}>Введите код безопасности</SectionTitle>
+    <Screen title="Код безопасности" bell={false} back sheetStyle={{ paddingTop: 56 }}>
+      <Stack gap={30} center>
+        <SectionTitle size={18}>Введите код безопасности</SectionTitle>
         <PinInput value={code} onChange={setCode} />
-        <Hint>
-          Учебный режим: письмо не отправляется, ваш код — <b>{demoCode}</b>
+        <Hint center>
+          Учебный режим: письмо не отправляется, ваш код — <T size={12} weight="bold">{demoCode}</T>
         </Hint>
-        {error && <ErrorText>{error}</ErrorText>}
-        <Stack $gap={12} $center>
-          <Button $small disabled={loading || code.length !== 6} onClick={accept}>
-            Подтвердить
-          </Button>
-          <Button $small $variant="secondary" disabled={loading} onClick={resend}>
-            Отправить снова
-          </Button>
+        {error ? <ErrorText>{error}</ErrorText> : null}
+        <Stack gap={12} center>
+          <Button title="Подтвердить" small disabled={loading || code.length !== 6} onPress={accept} />
+          <Button title="Отправить снова" small variant="secondary" disabled={loading} onPress={resend} />
         </Stack>
       </Stack>
     </Screen>

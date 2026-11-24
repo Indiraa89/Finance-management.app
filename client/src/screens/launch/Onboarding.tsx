@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
-import styled from 'styled-components';
+import { Pressable, View } from 'react-native';
 import { CoinsHand, IllustrationCircle, PhoneHand } from '@/components/illustrations';
 import { Screen } from '@/components/Screen';
+import { T } from '@/components/ui';
+import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme';
-import { ONBOARDING_KEY } from './Splash';
 
 const slides = [
   { title: 'Добро пожаловать\nв менеджер расходов', Art: CoinsHand },
@@ -14,73 +14,46 @@ const slides = [
 /** 2-A и 2-B. Онбординг из двух слайдов */
 export function Onboarding() {
   const [step, setStep] = useState(0);
-  const navigate = useNavigate();
+  const { finishOnboarding } = useAuth();
   const { title, Art } = slides[step];
-
-  const next = () => {
-    if (step < slides.length - 1) return setStep(step + 1);
-    try {
-      localStorage.setItem(ONBOARDING_KEY, '1');
-    } catch {
-      /* хранилище недоступно */
-    }
-    navigate('/welcome', { replace: true });
-  };
+  const last = step === slides.length - 1;
 
   return (
     <Screen
       bell={false}
-      header={<Title>{title}</Title>}
-      sheetPadding="48px 32px 40px"
+      header={
+        <T size={27} weight="semibold" center style={{ lineHeight: 36, paddingTop: 40, paddingBottom: 50 }}>
+          {title}
+        </T>
+      }
+      sheetStyle={{ paddingTop: 48, alignItems: 'center', gap: 32 }}
     >
-      <Body>
-        <IllustrationCircle>
-          <Art />
-        </IllustrationCircle>
-        <Next onClick={next}>{step < slides.length - 1 ? 'Далее' : 'Начать'}</Next>
-        <Dots>
-          {slides.map((s, i) => (
-            <Dot key={s.title} $active={i === step} onClick={() => setStep(i)} aria-label={`Слайд ${i + 1}`} />
-          ))}
-        </Dots>
-      </Body>
+      <IllustrationCircle>
+        <Art />
+      </IllustrationCircle>
+      {/* После последнего слайда навигатор сам покажет экран «Войти/Регистрация» */}
+      <Pressable onPress={() => (last ? finishOnboarding() : setStep(step + 1))} hitSlop={12}>
+        <T size={28} weight="semibold">
+          {last ? 'Начать' : 'Далее'}
+        </T>
+      </Pressable>
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        {slides.map((s, i) => (
+          <Pressable
+            key={s.title}
+            onPress={() => setStep(i)}
+            accessibilityLabel={`Слайд ${i + 1}`}
+            style={{
+              width: 13,
+              height: 13,
+              borderRadius: 7,
+              borderWidth: 1.5,
+              borderColor: i === step ? colors.primary : colors.dark,
+              backgroundColor: i === step ? colors.primary : 'transparent',
+            }}
+          />
+        ))}
+      </View>
     </Screen>
   );
 }
-
-const Title = styled.h1`
-  white-space: pre-line;
-  text-align: center;
-  font-size: 28px;
-  font-weight: 600;
-  line-height: 1.3;
-  padding: 50px 0 60px;
-`;
-
-const Body = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 32px;
-  padding-top: 10px;
-`;
-
-const Next = styled.button`
-  font-size: 28px;
-  font-weight: 600;
-  color: ${colors.dark};
-  margin-top: 10px;
-`;
-
-const Dots = styled.div`
-  display: flex;
-  gap: 10px;
-`;
-
-const Dot = styled.button<{ $active: boolean }>`
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  border: 1.5px solid ${({ $active }) => ($active ? colors.primary : colors.dark)};
-  background: ${({ $active }) => ($active ? colors.primary : 'transparent')};
-`;

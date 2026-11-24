@@ -17,13 +17,12 @@ import {
   ShoppingBag,
   ShoppingBasket,
   UtensilsCrossed,
-  type LucideIcon,
-} from 'lucide-react';
+} from 'lucide-react-native';
+import { View } from 'react-native';
 import type { IconKey } from '@finwise/shared';
-import styled from 'styled-components';
 import { colors } from '@/theme';
 
-export const ICONS: Record<IconKey, LucideIcon> = {
+export const ICONS: Record<IconKey, typeof Coins> = {
   salary: Banknote,
   food: UtensilsCrossed,
   transport: Bus,
@@ -58,25 +57,30 @@ const tone: Partial<Record<IconKey, string>> = {
 
 export function CategoryIcon({
   icon,
-  size = 52,
+  size = 46,
   bg,
-  radius = 18,
+  radius = 16,
+  color = colors.white,
 }: {
   icon: IconKey;
   size?: number;
   bg?: string;
   radius?: number;
+  color?: string;
 }) {
   const Icon = ICONS[icon] ?? Coins;
   return (
-    <Box style={{ width: size, height: size, borderRadius: radius, background: bg ?? tone[icon] ?? colors.lightBlue }}>
-      <Icon size={size * 0.48} color={colors.white} strokeWidth={1.8} />
-    </Box>
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radius,
+        backgroundColor: bg ?? tone[icon] ?? colors.lightBlue,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Icon size={size * 0.48} color={color} strokeWidth={1.8} />
+    </View>
   );
 }
-
-const Box = styled.span`
-  display: grid;
-  place-items: center;
-  flex: none;
-`;

@@ -1,8 +1,7 @@
 import type { NotificationSettings as NS } from '@finwise/shared';
 import { Screen } from '@/components/Screen';
-import { Loadable, Stack, Toggle } from '@/components/ui';
+import { Loadable, Stack, ToggleRow } from '@/components/ui';
 import { useSettings, useUpdateSettings } from '@/hooks/queries';
-import { ToggleRow } from './common';
 
 const items: { key: keyof NS; label: string }[] = [
   { key: 'general', label: 'Общие уведомления' },
@@ -21,19 +20,17 @@ export function NotificationSettings() {
   const update = useUpdateSettings();
 
   return (
-    <Screen nav back="/profile/settings" title="Уведомления">
+    <Screen tab="Profile" back title="Уведомления">
       <Loadable query={settings}>
         {(s) => (
-          <Stack $gap={24}>
+          <Stack gap={24}>
             {items.map((i) => (
-              <ToggleRow key={i.key}>
-                {i.label}
-                <Toggle
-                  label={i.label}
-                  checked={s.notifications[i.key]}
-                  onChange={(v) => update.mutate({ notifications: { [i.key]: v } })}
-                />
-              </ToggleRow>
+              <ToggleRow
+                key={i.key}
+                label={i.label}
+                checked={s.notifications[i.key]}
+                onChange={(v) => update.mutate({ notifications: { [i.key]: v } })}
+              />
             ))}
           </Stack>
         )}

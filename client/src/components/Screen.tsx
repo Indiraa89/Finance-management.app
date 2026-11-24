@@ -1,28 +1,30 @@
-import { ArrowLeft, Bell } from 'lucide-react';
+import { ArrowLeft, Bell } from 'lucide-react-native';
 import type { ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router';
-import styled, { css } from 'styled-components';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNotifications } from '@/hooks/queries';
+import { useNav, type TabName } from '@/navigation/types';
 import { colors, radius } from '@/theme';
-import { BottomNav } from './BottomNav';
+import { BottomNav, NAV_HEIGHT } from './BottomNav';
+import { T } from './ui';
 
 interface ScreenProps {
   /** Заголовок в зелёной шапке */
-  title?: ReactNode;
-  /** Кнопка «назад»: true — назад по истории, строка — конкретный путь */
-  back?: boolean | string;
+  title?: string;
+  /** Кнопка «назад» */
+  back?: boolean;
   /** Колокольчик уведомлений справа */
   bell?: boolean;
   /** Своё содержимое шапки вместо заголовка (например, приветствие на Главной) */
   header?: ReactNode;
   /** Содержимое зелёной зоны под заголовком (баланс и т.д.) */
   top?: ReactNode;
-  /** Нижнее меню (для экранов-вкладок) */
-  nav?: boolean;
-  /** Цвет фона шапки */
-  tone?: 'green' | 'blue';
+  /** Нижнее меню: какая вкладка подсвечена (null — меню есть, но ничего не выбрано) */
+  tab?: TabName | null;
+  /** Кнопка, которая «висит» над нижним меню (плюс, «Добавить расход»…) */
+  floating?: ReactNode;
   /** Отступы внутри светлой «шторки» */
-  sheetPadding?: string;
+  sheetStyle?: StyleProp<ViewStyle>;
   children?: ReactNode;
 }
 
@@ -30,131 +32,92 @@ interface ScreenProps {
  * Каркас почти всех экранов из макета:
  * зелёная шапка → светлая «шторка» со скруглёнными углами → (нижнее меню).
  */
-export function Screen({
-  title,
-  back,
-  bell = true,
-  header,
-  top,
-  nav = false,
-  tone = 'green',
-  sheetPadding,
-  children,
-}: ScreenProps) {
+export function Screen({ title, back, bell = true, header, top, tab, floating, sheetStyle, children }: ScreenProps) {
+  const insets = useSafeAreaInsets();
+  const hasNav = tab !== undefined;
+  const bottomSpace = hasNav ? NAV_HEIGHT + insets.bottom + 40 : insets.bottom + 40;
+
   return (
-    <Scroll $nav={nav}>
-      <Top $tone={tone}>
-        {header ?? (
-          <HeaderRow>
-            {back ? <BackButton to={back} /> : <span style={{ width: 32 }} />}
-            <Title>{title}</Title>
-            {bell ? <BellButton /> : <span style={{ width: 32 }} />}
-          </HeaderRow>
-        )}
-        {top}
-      </Top>
-      <Sheet $padding={sheetPadding}>{children}</Sheet>
-      {nav && <BottomNav />}
-    </Scroll>
+    <KeyboardAvoidingView style={s.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView
+        style={s.root}
+        contentContainerStyle={{ flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[s.top, { paddingTop: insets.top + 20 }]}>
+          {header ?? (
+            <View style={s.headerRow}>
+              {back ? <BackButton /> : <View style={s.side} />}
+              <T size={20} weight="semibold" center style={{ flex: 1 }} numberOfLines={1}>
+                {title}
+              </T>
+              {bell ? <BellButton /> : <View style={s.side} />}
+            </View>
+          )}
+          {top}
+        </View>
+        <View style={[s.sheet, { paddingBottom: bottomSpace + (floating ? 60 : 0) }, sheetStyle]}>{children}</View>
+      </ScrollView>
+      {floating && <View style={[s.floating, { bottom: (hasNav ? NAV_HEIGHT : 0) + insets.bottom + 16 }]} pointerEvents="box-none">{floating}</View>}
+      {hasNav && <BottomNav active={tab ?? null} />}
+    </KeyboardAvoidingView>
   );
 }
 
-function BackButton({ to }: { to: boolean | string }) {
-  const navigate = useNavigate();
+function BackButton() {
+  const navigation = useNav();
   return (
-    <IconBtn
-      aria-label="Назад"
-      onClick={() => (typeof to === 'string' ? navigate(to) : navigate(-1))}
-      $plain
+    <Pressable
+      accessibilityLabel="Назад"
+      hitSlop={12}
+      style={s.side}
+      onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.reset({ index: 0, routes: [{ name: 'Home' }] }))}
     >
       <ArrowLeft size={24} strokeWidth={2.4} color={colors.white} />
-    </IconBtn>
+    </Pressable>
   );
 }
 
 export function BellButton() {
+  const navigation = useNav();
   const { data } = useNotifications();
   const unread = data?.some((n) => !n.read) ?? false;
   return (
-    <IconBtn as={Link} to="/notifications" aria-label="Уведомления">
+    <Pressable accessibilityLabel="Уведомления" style={s.bell} onPress={() => navigation.navigate('Notifications')}>
       <Bell size={17} strokeWidth={2.2} color={colors.dark} />
-      {unread && <Dot />}
-    </IconBtn>
+      {unread && <View style={s.dot} />}
+    </Pressable>
   );
 }
 
-/* Без position: relative — чтобы нижнее меню крепилось к «телефону», а не прокручивалось */
-const Scroll = styled.div<{ $nav: boolean }>`
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-`;
+/** Полностью зелёный (или любой) экран по центру: сплэш, «Пароль изменён» */
+export function FullScreen({ children, bg = colors.primary }: { children: ReactNode; bg?: string }) {
+  return <View style={[s.full, { backgroundColor: bg }]}>{children}</View>;
+}
 
-const Top = styled.header<{ $tone: 'green' | 'blue' }>`
-  background: ${({ $tone }) => ($tone === 'blue' ? colors.oceanBlue : colors.primary)};
-  padding: calc(var(--status-h) + 22px) 28px 28px;
-  color: ${colors.dark};
-  flex: none;
-`;
-
-const HeaderRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 32px;
-`;
-
-const Title = styled.h1`
-  font-size: 20px;
-  font-weight: 600;
-  text-align: center;
-  flex: 1;
-`;
-
-export const IconBtn = styled.button<{ $plain?: boolean }>`
-  position: relative;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  flex: none;
-  ${({ $plain }) =>
-    !$plain &&
-    css`
-      background: ${colors.lightGreen};
-    `}
-`;
-
-const Dot = styled.span`
-  position: absolute;
-  top: 6px;
-  right: 7px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: ${colors.oceanBlue};
-`;
-
-const Sheet = styled.main<{ $padding?: string }>`
-  flex: 1 0 auto;
-  background: ${colors.honeydew};
-  border-radius: ${radius.sheet} ${radius.sheet} 0 0;
-  padding: ${({ $padding }) => $padding ?? '36px 24px 140px'};
-`;
-
-/** Полностью зелёный экран (сплэш, «Пароль изменён») */
-export const FullScreen = styled.div<{ $bg?: string }>`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  padding: 40px;
-  text-align: center;
-  background: ${({ $bg }) => $bg ?? colors.primary};
-`;
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.primary },
+  top: { backgroundColor: colors.primary, paddingHorizontal: 28, paddingBottom: 28 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 32 },
+  side: { width: 32, height: 32, justifyContent: 'center' },
+  bell: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.lightGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dot: { position: 'absolute', top: 6, right: 7, width: 7, height: 7, borderRadius: 4, backgroundColor: colors.oceanBlue },
+  sheet: {
+    flexGrow: 1,
+    backgroundColor: colors.honeydew,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
+    paddingTop: 36,
+    paddingHorizontal: 24,
+  },
+  floating: { position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: 21 },
+  full: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 20, padding: 40 },
+});

@@ -15,29 +15,28 @@ export const colors = {
   white: '#FFFFFF',
   muted: '#5C7271',
   danger: '#E5484D',
-  canvas: '#1E1E1E', // фон вокруг «телефона» на компьютере
+  overlay: 'rgba(9, 48, 48, 0.45)',
+  canvas: '#1E1E1E',
 } as const;
 
 /**
  * В макете используется Poppins, но в нём нет кириллицы.
  * Montserrat — похожий геометрический шрифт с русскими буквами.
+ * В React Native у каждого начертания своё имя шрифта.
  */
 export const fonts = {
-  main: "'Montserrat', system-ui, -apple-system, 'Segoe UI', sans-serif",
+  light: 'Montserrat_300Light',
+  regular: 'Montserrat_400Regular',
+  medium: 'Montserrat_500Medium',
+  semibold: 'Montserrat_600SemiBold',
+  bold: 'Montserrat_700Bold',
 } as const;
+
+export type FontWeight = keyof typeof fonts;
 
 export const radius = {
-  sheet: '56px',
-  card: '28px',
-  pill: '999px',
-  field: '18px',
+  sheet: 56,
+  card: 28,
+  field: 18,
+  pill: 999,
 } as const;
-
-export const shadow = {
-  phone: '0 30px 80px rgba(0, 0, 0, 0.45)',
-  card: '0 4px 16px rgba(9, 48, 48, 0.08)',
-} as const;
-
-/** Ширина «телефона» на компьютере */
-export const PHONE_WIDTH = 430;
-export const PHONE_HEIGHT = 932;

@@ -2,20 +2,24 @@
   "name": "finwise",
   "version": "1.0.0",
   "private": true,
-  "description": "FinWise — мобильное приложение для учёта финансов (React + TypeScript + Express API)",
+  "description": "FinWise — мобильное приложение для учёта финансов (React Native + Expo + TypeScript + Express API)",
   "workspaces": [
     "shared",
     "server",
     "client"
   ],
   "scripts": {
-    "dev": "concurrently -n api,web -c green,cyan \"npm run dev -w server\" \"npm run dev -w client\"",
-    "build": "npm run build -w server && npm run build -w client",
+    "dev": "concurrently -n api,app -c green,cyan \"npm run dev -w server\" \"npm run start -w client\"",
+    "api": "npm run dev -w server",
+    "app": "npm run start -w client",
+    "web": "concurrently -n api,web -c green,cyan \"npm run dev -w server\" \"npm run web -w client\"",
+    "build": "npm run build -w server",
     "start": "npm run start -w server",
-    "typecheck": "tsc -p shared && tsc -p server --noEmit && tsc -p client --noEmit",
+    "typecheck": "tsc -p shared && tsc -p server --noEmit && npm run typecheck -w client",
     "reset-db": "npm run reset-db -w server"
   },
   "devDependencies": {
+    "@types/react": "~19.3.0",
     "concurrently": "^9.1.2",
     "typescript": "~5.7.3"
   },
